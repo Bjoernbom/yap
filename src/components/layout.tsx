@@ -1,39 +1,36 @@
-import * as React from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
-import { Mic, Library, Settings } from 'lucide-react'
+import { useGlobalShortcut } from '@/hooks/use-global-shortcut'
 
 export function Layout() {
+	useGlobalShortcut()
+
 	return (
-		<div className="flex h-full">
-			<nav className="flex w-16 flex-col items-center gap-2 border-r border-border bg-bg-secondary py-4">
+		<div className="flex h-full flex-col">
+			<header
+				className="flex h-12 shrink-0 items-center justify-between border-b border-white/[0.06] bg-bg/80 px-6 backdrop-blur-xl"
+				data-tauri-drag-region
+			>
 				<NavLink
 					to="/"
+					className="text-[15px] font-medium tracking-tight text-text"
+					data-tauri-drag-region
+				>
+					voice thing
+				</NavLink>
+				<NavLink
+					to="/settings"
 					className={({ isActive }) =>
-						`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+						`text-[13px] transition-colors duration-150 ${
 							isActive
-								? 'bg-accent text-white'
-								: 'text-text-tertiary hover:bg-bg-tertiary hover:text-text'
+								? 'text-text'
+								: 'text-text-tertiary hover:text-text-secondary'
 						}`
 					}
 				>
-					<Mic size={20} />
+					setup
 				</NavLink>
-				<div className="mt-auto flex flex-col gap-2">
-					<NavLink
-						to="/settings"
-						className={({ isActive }) =>
-							`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
-								isActive
-									? 'bg-accent text-white'
-									: 'text-text-tertiary hover:bg-bg-tertiary hover:text-text'
-							}`
-						}
-					>
-						<Settings size={20} />
-					</NavLink>
-				</div>
-			</nav>
-			<main className="flex-1 overflow-auto">
+			</header>
+			<main className="flex-1 overflow-hidden">
 				<Outlet />
 			</main>
 		</div>

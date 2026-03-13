@@ -13,10 +13,40 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["image-png", "tray-icon"] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-process = "2"
+base64 = "0.22"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+whisper-rs = { version = "0.13", features = ["metal"] }
+hound = "3.5"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["stream", "json"] }
+futures-util = "0.3"
+
+# System audio capture (macOS ScreenCaptureKit)
+screencapturekit = { version = "1.5", features = ["macos_13_0"] }
+
+# Microphone capture
+cpal = "0.17"
+
+# Audio DSP: resampling, filters
+dasp_sample = "0.11"
+dasp_signal = "0.11"
+dasp_ring_buffer = "0.11"
+
+# Inter-thread audio channels
+crossbeam-channel = "0.5"
+
+# Speaker diarization
+pyannote-rs = { version = "0.3", features = ["coreml"] }
+
+# Pin ort to rc.11 — rc.12 has Send/Sync issues with pyannote-rs
+ort = "=2.0.0-rc.10"
+
+# macOS permissions
+core-graphics = "0.24"

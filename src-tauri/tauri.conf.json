@@ -10,10 +10,9 @@
 		"beforeBuildCommand": "bun run build"
 	},
 	"app": {
-		"title": "Voice Thing",
 		"windows": [
 			{
-				"title": "Voice Thing",
+				"title": "voice thing",
 				"width": 900,
 				"height": 700,
 				"minWidth": 600,
@@ -27,11 +26,20 @@
 			"csp": null
 		}
 	},
+	"bundle": {
+		"resources": [
+			"icons/icon.png",
+			"icons/icon-recording.png"
+		],
+		"macOS": {
+			"infoPlist": "Info.plist"
+		}
+	},
 	"plugins": {
 		"sql": {
-			"preload": {
-				"db": "sqlite:voice-thing.db"
-			}
+			"preload": [
+				"sqlite:voice-thing.db"
+			]
 		}
 	}
 }

@@ -5,6 +5,23 @@
 	"windows": ["main"],
 	"permissions": [
 		"core:default",
+		"core:tray:default",
+		"core:tray:allow-new",
+		"core:tray:allow-set-icon",
+		"core:tray:allow-set-icon-as-template",
+		"core:tray:allow-set-tooltip",
+		"core:menu:default",
+		"core:menu:allow-new",
+		"core:menu:allow-popup",
+		"core:menu:allow-set-text",
+		"core:menu:allow-set-enabled",
+		"core:event:default",
+		"core:event:allow-emit",
+		"core:event:allow-listen",
+		"core:window:default",
+		"core:window:allow-show",
+		"core:window:allow-hide",
+		"core:window:allow-set-focus",
 		"sql:default",
 		"sql:allow-execute",
 		"sql:allow-select",
@@ -13,8 +30,13 @@
 		"fs:allow-write",
 		"fs:allow-exists",
 		"fs:allow-mkdir",
+		"fs:allow-remove",
+		"fs:scope-appdata-recursive",
 		"shell:default",
 		"global-shortcut:default",
-		"global-shortcut:allow-register"
+		"global-shortcut:allow-register",
+		"global-shortcut:allow-unregister",
+		"process:default",
+		"process:allow-exit"
 	]
 }
