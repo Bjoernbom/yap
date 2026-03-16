@@ -1,37 +1,37 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { useGlobalShortcut } from '@/hooks/use-global-shortcut'
+import { DictationBadge } from '@/components/dictation-badge'
 
 export function Layout() {
-	useGlobalShortcut()
-
 	return (
 		<div className="flex h-full flex-col">
+			{/* Titlebar area — macOS traffic lights sit here */}
 			<header
-				className="flex h-12 shrink-0 items-center justify-between border-b border-white/[0.06] bg-bg/80 px-6 backdrop-blur-xl"
+				className="flex h-12 shrink-0 items-end justify-between px-3.5 pb-1.5"
 				data-tauri-drag-region
 			>
 				<NavLink
 					to="/"
-					className="text-[15px] font-medium tracking-tight text-text"
-					data-tauri-drag-region
+					className="text-[13px] font-semibold tracking-tight text-foreground/90"
 				>
-					voice thing
+					yap
 				</NavLink>
 				<NavLink
 					to="/settings"
 					className={({ isActive }) =>
-						`text-[13px] transition-colors duration-150 ${
+						`text-[11px] font-medium transition-colors ${
 							isActive
-								? 'text-text'
-								: 'text-text-tertiary hover:text-text-secondary'
+								? 'text-foreground/70'
+								: 'text-muted-foreground/40 hover:text-foreground/50'
 						}`
 					}
 				>
-					setup
+					settings
 				</NavLink>
 			</header>
-			<main className="flex-1 overflow-hidden">
+			<div className="mx-3.5 border-b border-border/30" />
+			<main className="relative flex-1 overflow-hidden">
 				<Outlet />
+				<DictationBadge />
 			</main>
 		</div>
 	)
