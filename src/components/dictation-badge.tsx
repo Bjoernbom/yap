@@ -11,17 +11,17 @@ export function DictationBadge() {
 			const { state, text, error } = event.payload
 			setStatus(state)
 
-			if (state === 'listening') setMessage('listening...')
-			else if (state === 'locked') setMessage('locked on')
-			else if (state === 'transcribing') setMessage('thinking...')
+			if (state === 'listening') setMessage('yapping...')
+			else if (state === 'locked') setMessage('yapping...')
+			else if (state === 'transcribing') setMessage('cooking...')
 			else if (state === 'complete' && text) {
-				setMessage('pasted')
+				setMessage('yapped')
 				setTimeout(() => setStatus('idle'), 1500)
 			} else if (state === 'error') {
 				setMessage(error || 'oops')
 				setTimeout(() => setStatus('idle'), 2500)
 			} else if (state === 'complete') {
-				setMessage('too short')
+				setMessage('too quiet')
 				setTimeout(() => setStatus('idle'), 1200)
 			}
 		})

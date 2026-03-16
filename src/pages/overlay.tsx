@@ -21,12 +21,12 @@ export function OverlayPage() {
 			setStatus(state)
 
 			if (state === 'idle') { setMessage('yap'); setElapsed(0) }
-			else if (state === 'listening') { setMessage('listening'); setElapsed(0) }
-			else if (state === 'locked') { setMessage('locked on'); setElapsed(0) }
-			else if (state === 'transcribing') setMessage('thinking')
-			else if (state === 'complete' && text) setMessage('done')
+			else if (state === 'listening') { setMessage('yapping'); setElapsed(0) }
+			else if (state === 'locked') { setMessage('yapping'); setElapsed(0) }
+			else if (state === 'transcribing') setMessage('cooking')
+			else if (state === 'complete' && text) setMessage('yapped')
 			else if (state === 'error') setMessage(error || 'oops')
-			else if (state === 'complete') setMessage(error || 'done')
+			else if (state === 'complete') setMessage(error || 'yapped')
 		})
 		return () => { unlisten.then((fn) => fn()) }
 	}, [])
