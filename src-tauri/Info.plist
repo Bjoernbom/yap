@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSScreenCaptureUsageDescription</key>
-	<string>Voice Thing needs Screen Recording permission to capture system audio from meetings.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Voice Thing needs microphone access to record your voice.</string>
+	<string>Voice Thing needs microphone access to record your voice for dictation.</string>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>Voice Thing needs accessibility access for global hotkey detection and pasting transcribed text.</string>
 </dict>
 </plist>

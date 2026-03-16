@@ -1,6 +1,6 @@
 {
 	"$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
-	"productName": "Voice Thing",
+	"productName": "yap",
 	"version": "0.1.0",
 	"identifier": "com.voicething.app",
 	"build": {
@@ -12,24 +12,37 @@
 	"app": {
 		"windows": [
 			{
-				"title": "voice thing",
-				"width": 900,
-				"height": 700,
-				"minWidth": 600,
-				"minHeight": 500,
+				"title": "yap",
+				"width": 380,
+				"height": 560,
+				"minWidth": 320,
+				"minHeight": 400,
 				"resizable": true,
 				"decorations": true,
-				"transparent": false
+				"transparent": false,
+				"hiddenTitle": true,
+				"titleBarStyle": "Overlay"
 			}
 		],
 		"security": {
 			"csp": null
+		},
+		"trayIcon": {
+			"id": "yap-tray",
+			"iconPath": "icons/tray-icon.png",
+			"iconAsTemplate": true,
+			"tooltip": "yap"
 		}
 	},
 	"bundle": {
 		"resources": [
+			"icons/tray-icon.png",
+			"icons/tray-recording.png"
+		],
+		"icon": [
 			"icons/icon.png",
-			"icons/icon-recording.png"
+			"icons/128x128.png",
+			"icons/32x32.png"
 		],
 		"macOS": {
 			"infoPlist": "Info.plist"
