@@ -3,18 +3,10 @@ import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
-
-type Status = 'idle' | 'listening' | 'locked' | 'transcribing' | 'complete' | 'error'
-
-interface DictationEvent {
-	state: Status
-	text: string | null
-	error: string | null
-	duration_ms: number | null
-}
+import type { DictationEvent, DictationStatus } from '@/types/dictation'
 
 export function OverlayPage() {
-	const [status, setStatus] = useState<Status>('idle')
+	const [status, setStatus] = useState<DictationStatus>('idle')
 	const [message, setMessage] = useState('yap')
 	const [elapsed, setElapsed] = useState(0)
 	const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -26,7 +18,7 @@ export function OverlayPage() {
 	useEffect(() => {
 		const unlisten = listen<DictationEvent>('dictation-state', (event) => {
 			const { state, text, error } = event.payload
-			setStatus(state as Status)
+			setStatus(state)
 
 			if (state === 'idle') { setMessage('yap'); setElapsed(0) }
 			else if (state === 'listening') { setMessage('listening'); setElapsed(0) }

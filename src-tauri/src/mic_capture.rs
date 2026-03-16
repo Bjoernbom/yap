@@ -125,8 +125,4 @@ impl MicCaptureState {
 
         samples
     }
-
-    pub fn is_recording(&self) -> bool {
-        self.recording.load(Ordering::Relaxed)
-    }
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getSetting, setSetting, deleteSetting } from '@/lib/settings'
+import { STYLE_OPTIONS } from '@/lib/dictation-styles'
 import { Loader2, Check, ChevronDown, ExternalLink } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 
@@ -30,33 +31,6 @@ const MODEL_OPTIONS = [
 	{ value: 'small', label: 'Small', size: '466 MB', badge: '' },
 	{ value: 'base', label: 'Base', size: '142 MB', badge: '' },
 	{ value: 'tiny', label: 'Tiny', size: '75 MB', badge: 'fast' },
-]
-
-const STYLE_OPTIONS = [
-	{
-		value: 'formal',
-		label: 'Proper',
-		hint: 'full sentences, correct grammar',
-		prompt: 'Skriv med korrekt grammatik, fullständiga meningar och formell stil. Använd skiljetecken. Inga förkortningar eller talspråk.',
-	},
-	{
-		value: 'balanced',
-		label: 'Natural',
-		hint: 'how you\'d normally write',
-		prompt: 'Skriv naturligt med korrekt interpunktion och grammatik. Balansera mellan formellt och informellt.',
-	},
-	{
-		value: 'casual',
-		label: 'Chill',
-		hint: 'like texting a friend',
-		prompt: 'Skriv vardagligt och avslappnat, som i en chatt. Korta meningar, inga onödiga formaliteter.',
-	},
-	{
-		value: 'dev',
-		label: 'Dev',
-		hint: 'optimized for LLM prompts & code',
-		prompt: 'You are transcribing a software developer dictating instructions for an AI coding assistant. Write clear, precise, technical language. Preserve exact technical terms, library names, function names, and programming concepts as spoken. Use imperative mood ("add a function", "refactor the component"). Structure as actionable instructions. Fill in obvious gaps — if the developer says "add error handling" assume try/catch or Result types as appropriate. Keep code references exact (React, TypeScript, Rust, API names). Output in the same language the developer speaks but keep all code terms in English.',
-	},
 ]
 
 const LANGUAGE_OPTIONS = [

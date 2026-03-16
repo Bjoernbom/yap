@@ -2,7 +2,7 @@ import Database from '@tauri-apps/plugin-sql'
 
 let db: Database | null = null
 
-async function getDb(): Promise<Database> {
+export async function getDb(): Promise<Database> {
 	if (!db) {
 		db = await Database.get('sqlite:voice-thing.db')
 	}

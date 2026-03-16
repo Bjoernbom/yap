@@ -1,5 +1,4 @@
 use std::sync::{Arc, Mutex};
-#[allow(unused_imports)]
 use tauri::Manager;
 
 use crate::accessibility;

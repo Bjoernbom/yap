@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react'
 import { listen } from '@tauri-apps/api/event'
-
-interface DictationEvent {
-	state: 'listening' | 'locked' | 'transcribing' | 'complete' | 'error'
-	text: string | null
-	error: string | null
-	duration_ms: number | null
-}
+import type { DictationEvent } from '@/types/dictation'
 
 export function DictationBadge() {
 	const [status, setStatus] = useState<DictationEvent['state'] | 'idle'>('idle')

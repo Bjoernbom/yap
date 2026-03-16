@@ -7,3 +7,4 @@ target/
 .env.*
 .DS_Store
 *.tsbuildinfo
+.mcp.json
