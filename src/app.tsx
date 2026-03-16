@@ -34,9 +34,12 @@ export function App() {
 			await loadDictations()
 			await initTray()
 
-			// Apply saved dictation style prompt
-			const style = await getSetting('dictation_style') || 'balanced'
-			const prompt = getPromptByStyle(style)
+			// Apply saved dictation style prompt with language
+			const [style, language] = await Promise.all([
+				getSetting('dictation_style'),
+				getSetting('whisper_language'),
+			])
+			const prompt = getPromptByStyle(style || 'balanced', language || 'en')
 			if (prompt) {
 				await invoke('set_prompt', { prompt })
 			}
@@ -53,7 +56,7 @@ export function App() {
 		const unlisten = listen<DictationEvent>('dictation-state', async (event) => {
 			const { state, text, duration_ms } = event.payload
 			if (state === 'complete' && text) {
-				const language = await getSetting('whisper_language') || 'sv'
+				const language = await getSetting('whisper_language') || 'en'
 				addDictation({
 					text,
 					language,

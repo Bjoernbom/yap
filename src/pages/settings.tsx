@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getSetting, setSetting, deleteSetting } from '@/lib/settings'
-import { STYLE_OPTIONS } from '@/lib/dictation-styles'
+import { STYLE_OPTIONS, getPromptByStyle } from '@/lib/dictation-styles'
 import { Loader2, Check, ChevronDown, ExternalLink } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 
@@ -34,8 +34,8 @@ const MODEL_OPTIONS = [
 ]
 
 const LANGUAGE_OPTIONS = [
-	{ value: 'sv', label: 'Svenska' },
 	{ value: 'en', label: 'English' },
+	{ value: 'sv', label: 'Svenska' },
 	{ value: 'de', label: 'Deutsch' },
 	{ value: 'fr', label: 'Français' },
 	{ value: 'es', label: 'Español' },
@@ -108,7 +108,7 @@ export function SettingsPage() {
 	const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([])
 	const [selectedDeviceId, setSelectedDeviceId] = useState('')
 	const [whisperModel, setWhisperModel] = useState('large-v3-turbo')
-	const [whisperLanguage, setWhisperLanguage] = useState('sv')
+	const [whisperLanguage, setWhisperLanguage] = useState('en')
 	const [hotkey, setHotkey] = useState('RightAlt')
 	const [style, setStyle] = useState('balanced')
 	const [accessibilityGranted, setAccessibilityGranted] = useState<boolean | null>(null)
@@ -136,8 +136,9 @@ export function SettingsPage() {
 			if (st) setStyle(st)
 
 			const savedStyle = st || 'balanced'
-			const styleOpt = STYLE_OPTIONS.find((s) => s.value === savedStyle)
-			if (styleOpt) await invoke('set_prompt', { prompt: styleOpt.prompt })
+			const savedLang = lang || 'en'
+			const prompt = getPromptByStyle(savedStyle, savedLang)
+			if (prompt) await invoke('set_prompt', { prompt })
 
 			const [status, accessible] = await Promise.all([
 				invoke<boolean>('check_model_status', { modelName: model || 'large-v3-turbo' }),
@@ -238,7 +239,8 @@ export function SettingsPage() {
 								onClick={async () => {
 									setStyle(opt.value)
 									await setSetting('dictation_style', opt.value)
-									await invoke('set_prompt', { prompt: opt.prompt })
+									const prompt = getPromptByStyle(opt.value, whisperLanguage)
+									if (prompt) await invoke('set_prompt', { prompt })
 								}}
 								className={`flex-1 rounded-md px-2 py-1.5 text-center transition-all ${
 									style === opt.value
@@ -342,6 +344,9 @@ export function SettingsPage() {
 						if (v) await setSetting('whisper_language', v)
 						else await deleteSetting('whisper_language')
 						await invoke('set_language', { language: v })
+						// Update prompt for new language
+						const prompt = getPromptByStyle(style, v || 'en')
+						if (prompt) await invoke('set_prompt', { prompt })
 					}}>
 						{LANGUAGE_OPTIONS.map((o) => (
 							<option key={o.value} value={o.value}>{o.label}</option>

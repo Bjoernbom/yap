@@ -16,7 +16,7 @@ export async function initDb(): Promise<void> {
 		CREATE TABLE IF NOT EXISTS dictations (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			text TEXT NOT NULL,
-			language TEXT DEFAULT 'sv',
+			language TEXT DEFAULT 'en',
 			duration_ms INTEGER NOT NULL DEFAULT 0,
 			created_at TEXT NOT NULL
 		)

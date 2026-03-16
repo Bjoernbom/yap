@@ -39,7 +39,7 @@ impl DictationManager {
             mic: Arc::new(Mutex::new(MicCaptureState::new())),
             whisper,
             mic_device: Arc::new(Mutex::new(None)),
-            language: Arc::new(Mutex::new("sv".to_string())),
+            language: Arc::new(Mutex::new("en".to_string())),
             prompt: Arc::new(Mutex::new(String::new())),
         }
     }
@@ -190,7 +190,7 @@ fn process_recording(
     let duration_ms = (samples.len() as f64 / 16000.0 * 1000.0) as u64;
     emit_state(app, "transcribing", None, None, Some(duration_ms));
 
-    let lang = language.lock().ok().map(|l| l.clone()).unwrap_or_else(|| "sv".to_string());
+    let lang = language.lock().ok().map(|l| l.clone()).unwrap_or_else(|| "en".to_string());
     let lang_opt = if lang.is_empty() { None } else { Some(lang) };
     let prompt_str = prompt.lock().ok().map(|p| p.clone()).unwrap_or_default();
     let prompt_opt = if prompt_str.is_empty() { None } else { Some(prompt_str) };
