@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Copy, Trash2, Check } from 'lucide-react'
 import { useDictationStore, type Dictation } from '@/stores/dictation-store'
+import { getSetting } from '@/lib/settings'
+import { getHotkeySymbol } from '@/lib/hotkeys'
 
 function formatTime(iso: string): string {
 	const d = new Date(iso)
@@ -81,6 +83,13 @@ function DictationItem({ item }: { item: Dictation }) {
 
 export function HomePage() {
 	const dictations = useDictationStore((s) => s.dictations)
+	const [hotkeySymbol, setHotkeySymbol] = useState('⌥R')
+
+	useEffect(() => {
+		getSetting('hotkey').then((hk) => {
+			if (hk) setHotkeySymbol(getHotkeySymbol(hk))
+		})
+	}, [])
 
 	const stats = useMemo(() => {
 		const today = new Date()
@@ -104,18 +113,27 @@ export function HomePage() {
 
 	return (
 		<div className="flex h-full flex-col">
-			{/* Stats bar */}
-			{dictations.length > 0 && (
-				<div className="flex items-center border-b border-border/20 px-3.5 py-3">
-					<Stat label="today" value={String(stats.todayCount)} />
-					<div className="h-6 w-px bg-border/20" />
-					<Stat label="words" value={stats.totalWords > 999 ? `${(stats.totalWords / 1000).toFixed(1)}k` : String(stats.totalWords)} />
-					<div className="h-6 w-px bg-border/20" />
-					<Stat label="mins" value={String(stats.totalMins)} />
-					<div className="h-6 w-px bg-border/20" />
-					<Stat label="wpm" value={stats.wpm > 0 ? String(stats.wpm) : '—'} />
+			{/* Trigger + Stats bar */}
+			<div className="flex items-center border-b border-border/20 px-3.5 py-3">
+				<div className="flex items-center gap-1.5">
+					<kbd className="rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/50">
+						{hotkeySymbol}
+					</kbd>
+					<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">
+						trigger
+					</span>
 				</div>
-			)}
+				{dictations.length > 0 && (
+					<>
+						<div className="mx-3 h-6 w-px bg-border/20" />
+						<Stat label="today" value={String(stats.todayCount)} />
+						<div className="h-6 w-px bg-border/20" />
+						<Stat label="words" value={stats.totalWords > 999 ? `${(stats.totalWords / 1000).toFixed(1)}k` : String(stats.totalWords)} />
+						<div className="h-6 w-px bg-border/20" />
+						<Stat label="wpm" value={stats.wpm > 0 ? String(stats.wpm) : '—'} />
+					</>
+				)}
+			</div>
 
 			{/* History header */}
 			{dictations.length > 0 && (
@@ -143,7 +161,7 @@ export function HomePage() {
 								nothing here yet
 							</p>
 							<p className="text-[11px] leading-relaxed text-muted-foreground/35">
-								hold <kbd className="mx-0.5 rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/40">⌥R</kbd> and start talking
+								hold <kbd className="mx-0.5 rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/40">{hotkeySymbol}</kbd> and start talking
 								<br />
 								<span className="text-muted-foreground/25">text appears wherever your cursor is</span>
 							</p>

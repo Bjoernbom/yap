@@ -3,26 +3,9 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getSetting, setSetting, deleteSetting } from '@/lib/settings'
 import { STYLE_OPTIONS, getPromptByStyle } from '@/lib/dictation-styles'
+import { HOTKEY_OPTIONS } from '@/lib/hotkeys'
 import { Loader2, Check, ChevronDown, ExternalLink } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
-
-const HOTKEY_OPTIONS = [
-	{ value: 'RightAlt', label: 'Right Option', group: 'Modifiers' },
-	{ value: 'LeftAlt', label: 'Left Option', group: 'Modifiers' },
-	{ value: 'RightControl', label: 'Right Control', group: 'Modifiers' },
-	{ value: 'RightShift', label: 'Right Shift', group: 'Modifiers' },
-	{ value: 'RightMeta', label: 'Right Cmd', group: 'Modifiers' },
-	{ value: 'F5', label: 'F5', group: 'Function keys' },
-	{ value: 'F6', label: 'F6', group: 'Function keys' },
-	{ value: 'F7', label: 'F7', group: 'Function keys' },
-	{ value: 'F8', label: 'F8', group: 'Function keys' },
-	{ value: 'F9', label: 'F9', group: 'Function keys' },
-	{ value: 'F13', label: 'F13', group: 'Function keys' },
-	{ value: 'F16', label: 'F16', group: 'Function keys' },
-	{ value: 'F17', label: 'F17', group: 'Function keys' },
-	{ value: 'F18', label: 'F18', group: 'Function keys' },
-	{ value: 'F19', label: 'F19', group: 'Function keys' },
-]
 
 const MODEL_OPTIONS = [
 	{ value: 'large-v3-turbo', label: 'Turbo', size: '1.6 GB', badge: 'recommended' },
