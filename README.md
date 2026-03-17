@@ -19,10 +19,27 @@ Everything runs locally. No cloud, no API keys, no data leaves your machine.
 
 Download the latest `.dmg` from [Releases](../../releases).
 
+### macOS Gatekeeper
+
+The app is not code-signed. macOS will block it with a "damaged" or "unidentified developer" warning. To fix this, open Terminal and run:
+
+```bash
+xattr -cr /Applications/yap.app
+```
+
+Then open yap normally. You only need to do this once.
+
+### First launch
+
+1. Grant **Accessibility** permission (System Settings → Privacy & Security → Accessibility) — needed for the global hotkey and paste
+2. Grant **Microphone** permission when prompted
+3. Pick a Whisper model in settings — the app downloads it on first use (~1.6 GB for the recommended Turbo model)
+
 ### Requirements
 
 - macOS 13+
-- Accessibility permission (for hotkey detection + paste simulation)
+- Apple Silicon (M1/M2/M3/M4)
+- Accessibility permission
 - Microphone permission
 
 ## Build from source
