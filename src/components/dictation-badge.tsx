@@ -18,7 +18,8 @@ export function DictationBadge() {
 				setMessage('yapped')
 				setTimeout(() => setStatus('idle'), 1500)
 			} else if (state === 'error') {
-				setMessage(error || 'oops')
+				const msg = error || 'oops'
+				setMessage(msg.length > 30 ? msg.slice(0, 30) + '...' : msg)
 				setTimeout(() => setStatus('idle'), 2500)
 			} else if (state === 'complete') {
 				setMessage('too quiet')

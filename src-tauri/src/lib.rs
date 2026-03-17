@@ -22,6 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(whisper)
         .manage(hotkey_listener.clone())
         .manage(dictation_manager.clone())
@@ -128,6 +129,8 @@ pub fn run() {
             commands::check_accessibility,
             commands::request_accessibility,
             commands::open_accessibility_settings,
+            commands::get_autostart,
+            commands::set_autostart,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

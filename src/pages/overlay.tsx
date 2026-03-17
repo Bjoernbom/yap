@@ -25,7 +25,10 @@ export function OverlayPage() {
 			else if (state === 'locked') { setMessage('yapping'); setElapsed(0) }
 			else if (state === 'transcribing') setMessage('cooking')
 			else if (state === 'complete' && text) setMessage('yapped')
-			else if (state === 'error') setMessage(error || 'oops')
+			else if (state === 'error') {
+				const msg = error || 'oops'
+				setMessage(msg.length > 20 ? msg.slice(0, 20) + '...' : msg)
+			}
 			else if (state === 'complete') setMessage(error || 'yapped')
 		})
 		return () => { unlisten.then((fn) => fn()) }

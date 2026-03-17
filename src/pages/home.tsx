@@ -83,7 +83,13 @@ function DictationItem({ item }: { item: Dictation }) {
 
 export function HomePage() {
 	const dictations = useDictationStore((s) => s.dictations)
+	const clearAllDictations = useDictationStore((s) => s.clearAllDictations)
 	const [hotkeySymbol, setHotkeySymbol] = useState('⌥R')
+	const [search, setSearch] = useState('')
+
+	const filtered = search
+		? dictations.filter((d) => d.text.toLowerCase().includes(search.toLowerCase()))
+		: dictations
 
 	useEffect(() => {
 		getSetting('hotkey').then((hk) => {
@@ -115,12 +121,17 @@ export function HomePage() {
 		<div className="flex h-full flex-col">
 			{/* Trigger + Stats bar */}
 			<div className="flex items-center border-b border-border/20 px-3.5 py-3">
-				<div className="flex items-center gap-1.5">
-					<kbd className="rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/50">
-						{hotkeySymbol}
-					</kbd>
-					<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">
-						trigger
+				<div className="flex flex-col gap-0.5">
+					<div className="flex items-center gap-1.5">
+						<kbd className="rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/50">
+							{hotkeySymbol}
+						</kbd>
+						<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">
+							trigger
+						</span>
+					</div>
+					<span className="text-[8px] text-muted-foreground/20">
+						double-tap to lock on
 					</span>
 				</div>
 				{dictations.length > 0 && (
@@ -137,13 +148,35 @@ export function HomePage() {
 
 			{/* History header */}
 			{dictations.length > 0 && (
-				<div className="flex items-center justify-between px-3.5 py-2">
-					<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">
-						recent
-					</span>
-					<span className="text-[9px] tabular-nums text-muted-foreground/20">
-						{dictations.length}
-					</span>
+				<div className="space-y-1 px-3.5 py-2">
+					<div className="group/header flex items-center justify-between">
+						<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">
+							recent
+						</span>
+						<div className="flex items-center gap-2">
+							<span className="text-[9px] tabular-nums text-muted-foreground/20">
+								{dictations.length}
+							</span>
+							<button
+								onClick={() => {
+									if (window.confirm('Clear all dictation history?')) {
+										clearAllDictations()
+										setSearch('')
+									}
+								}}
+								className="text-[9px] text-muted-foreground/20 opacity-0 transition-opacity hover:text-destructive/50 group-hover/header:opacity-100"
+							>
+								clear
+							</button>
+						</div>
+					</div>
+					<input
+						type="text"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="search..."
+						className="w-full rounded bg-white/[0.03] px-2 py-1 text-[11px] text-foreground/70 placeholder:text-muted-foreground/20 focus:outline-none"
+					/>
 				</div>
 			)}
 
@@ -164,11 +197,13 @@ export function HomePage() {
 								hold <kbd className="mx-0.5 rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/40">{hotkeySymbol}</kbd> and start talking
 								<br />
 								<span className="text-muted-foreground/25">text appears wherever your cursor is</span>
+								<br />
+								<span className="text-muted-foreground/20">double-tap to lock recording on</span>
 							</p>
 						</div>
 					</div>
 				) : (
-					dictations.map((d) => (
+					filtered.map((d) => (
 						<DictationItem key={d.id} item={d} />
 					))
 				)}

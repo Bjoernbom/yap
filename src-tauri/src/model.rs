@@ -62,9 +62,19 @@ pub async fn ensure_model_exists(
     use std::io::Write;
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
-        file.write_all(&chunk)
-            .map_err(|e| format!("Write error: {}", e))?;
+        let chunk = match chunk {
+            Ok(c) => c,
+            Err(e) => {
+                drop(file);
+                let _ = std::fs::remove_file(&tmp_path);
+                return Err(format!("Download error: {}", e));
+            }
+        };
+        if let Err(e) = file.write_all(&chunk) {
+            drop(file);
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(format!("Write error: {}", e));
+        }
         downloaded += chunk.len() as u64;
 
         let _ = app.emit(
@@ -76,11 +86,17 @@ pub async fn ensure_model_exists(
         );
     }
 
-    file.flush().map_err(|e| format!("Flush error: {}", e))?;
+    if let Err(e) = file.flush() {
+        drop(file);
+        let _ = std::fs::remove_file(&tmp_path);
+        return Err(format!("Flush error: {}", e));
+    }
     drop(file);
 
-    std::fs::rename(&tmp_path, &model_path)
-        .map_err(|e| format!("Failed to move model file: {}", e))?;
+    if let Err(e) = std::fs::rename(&tmp_path, &model_path) {
+        let _ = std::fs::remove_file(&tmp_path);
+        return Err(format!("Failed to move model file: {}", e));
+    }
 
     Ok(model_path)
 }

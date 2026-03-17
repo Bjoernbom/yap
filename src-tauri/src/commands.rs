@@ -191,6 +191,22 @@ pub fn configure_overlay_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    if enabled {
+        app.autolaunch().enable().map_err(|e| e.to_string())
+    } else {
+        app.autolaunch().disable().map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
 pub fn check_accessibility() -> bool {
     accessibility::is_trusted()
 }

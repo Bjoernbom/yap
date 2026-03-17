@@ -41,6 +41,7 @@
 		"fs:scope-appdata-recursive",
 		"shell:default",
 		"process:default",
-		"process:allow-exit"
+		"process:allow-exit",
+		"autostart:default"
 	]
 }

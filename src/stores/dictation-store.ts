@@ -18,6 +18,7 @@ interface DictationStore {
 		durationMs: number
 	}) => Promise<void>
 	deleteDictation: (id: number) => Promise<void>
+	clearAllDictations: () => Promise<void>
 }
 
 function dbToDictation(row: db.DbDictation): Dictation {
@@ -57,5 +58,10 @@ export const useDictationStore = create<DictationStore>((set) => ({
 		set((state) => ({
 			dictations: state.dictations.filter((d) => d.id !== id),
 		}))
+	},
+
+	clearAllDictations: async () => {
+		await db.clearAllDictations()
+		set({ dictations: [] })
 	},
 }))

@@ -57,6 +57,11 @@ export async function deleteDictation(id: number): Promise<void> {
 	await database.execute('DELETE FROM dictations WHERE id = $1', [id])
 }
 
+export async function clearAllDictations(): Promise<void> {
+	const database = await getDb()
+	await database.execute('DELETE FROM dictations')
+}
+
 export async function getAllDictations(): Promise<DbDictation[]> {
 	const database = await getDb()
 	return await database.select<DbDictation[]>(

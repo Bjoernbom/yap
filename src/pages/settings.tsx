@@ -87,6 +87,7 @@ export function SettingsPage() {
 	const [modelDownloaded, setModelDownloaded] = useState<boolean | null>(null)
 	const [downloading, setDownloading] = useState(false)
 	const [downloadProgress, setDownloadProgress] = useState({ downloaded: 0, total: 0 })
+	const [downloadError, setDownloadError] = useState<string | null>(null)
 	const [micPermission, setMicPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt')
 	const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([])
 	const [selectedDeviceId, setSelectedDeviceId] = useState('')
@@ -95,6 +96,7 @@ export function SettingsPage() {
 	const [hotkey, setHotkey] = useState('RightAlt')
 	const [style, setStyle] = useState('balanced')
 	const [accessibilityGranted, setAccessibilityGranted] = useState<boolean | null>(null)
+	const [autostart, setAutostart] = useState(false)
 
 	async function loadDevices() {
 		const devices = await navigator.mediaDevices.enumerateDevices()
@@ -129,6 +131,8 @@ export function SettingsPage() {
 			])
 			setModelDownloaded(status)
 			setAccessibilityGranted(accessible)
+
+			invoke<boolean>('get_autostart').then(setAutostart).catch(() => {})
 
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -296,15 +300,19 @@ export function SettingsPage() {
 						))}
 					</div>
 
-					{!modelDownloaded && !downloading && (
+					{!modelDownloaded && !downloading && !downloadError && (
 						<button
 							onClick={async () => {
 								setDownloading(true)
+								setDownloadError(null)
 								try {
 									await invoke('download_model', { modelName: whisperModel })
 									setModelDownloaded(true)
-								} catch (e) { console.error(e) }
-								finally { setDownloading(false) }
+								} catch (e) {
+									setDownloadError(String(e))
+								} finally {
+									setDownloading(false)
+								}
 							}}
 							className="mt-1 w-full rounded-md bg-foreground/10 py-1.5 text-[10px] font-medium text-foreground/70 transition-colors hover:bg-foreground/15"
 						>
@@ -316,6 +324,18 @@ export function SettingsPage() {
 						<div className="mt-1.5 space-y-1">
 							<Progress value={progressPercent} className="h-1" />
 							<p className="text-[10px] tabular-nums text-muted-foreground/40">{progressPercent}%</p>
+						</div>
+					)}
+
+					{downloadError && (
+						<div className="mt-1.5 space-y-1">
+							<p className="text-[10px] text-destructive/70">{downloadError}</p>
+							<button
+								onClick={() => setDownloadError(null)}
+								className="text-[10px] text-foreground/50 hover:text-foreground/70"
+							>
+								retry
+							</button>
 						</div>
 					)}
 				</Row>
@@ -335,6 +355,24 @@ export function SettingsPage() {
 							<option key={o.value} value={o.value}>{o.label}</option>
 						))}
 					</Select>
+				</Row>
+
+				{/* Startup */}
+				<Row label="startup">
+					<button
+						onClick={async () => {
+							const next = !autostart
+							await invoke('set_autostart', { enabled: next })
+							setAutostart(next)
+						}}
+						className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-all ${
+							autostart
+								? 'bg-foreground/10 text-foreground/80'
+								: 'text-muted-foreground/40 hover:bg-white/[0.02] hover:text-muted-foreground/60'
+						}`}
+					>
+						{autostart ? 'launches on login' : 'manual'}
+					</button>
 				</Row>
 
 				{/* Footer info */}

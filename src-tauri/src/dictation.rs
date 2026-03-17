@@ -9,6 +9,7 @@ use crate::paste;
 use crate::transcribe::WhisperState;
 
 const MIN_RECORDING_DURATION_MS: u128 = 300;
+const MAX_RECORDING_DURATION_MS: u128 = 300_000; // 5 minutes
 const COOLDOWN_MS: u128 = 200;
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -121,7 +122,7 @@ fn record_session(
     {
         let mut m = match mic.lock() {
             Ok(m) => m,
-            Err(_) => { emit_state(app, "error", None, Some("Mic lock error".to_string()), None); return Vec::new(); }
+            Err(_) => { emit_state(app, "error", None, Some("mic busy — try again".to_string()), None); return Vec::new(); }
         };
         if let Err(e) = m.start(device_name.as_deref()) {
             emit_state(app, "error", None, Some(e), None);
@@ -157,6 +158,10 @@ fn record_session(
             Ok(HotkeyEvent::Start) => {}
             Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
                 if state_name == "locked" && !locked.load(Ordering::Relaxed) { break; }
+                if record_start.elapsed().as_millis() > MAX_RECORDING_DURATION_MS {
+                    eprintln!("[dictation] max duration reached, auto-stopping");
+                    break;
+                }
             }
             Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
         }
@@ -198,12 +203,12 @@ fn process_recording(
     let text = {
         let ws = match whisper.lock() {
             Ok(ws) => ws,
-            Err(_) => { emit_state(app, "error", None, Some("Whisper lock error".to_string()), Some(duration_ms)); return; }
+            Err(_) => { emit_state(app, "error", None, Some("transcription busy — try again".to_string()), Some(duration_ms)); return; }
         };
         if ws.is_loaded() {
             ws.transcribe_samples(&samples, lang_opt.as_deref(), prompt_opt.as_deref())
         } else {
-            Err("Model not loaded".to_string())
+            Err("no model loaded — check settings".to_string())
         }
     };
 
@@ -211,7 +216,7 @@ fn process_recording(
         Ok(ref t) if !t.trim().is_empty() => {
             eprintln!("[dictation] transcribed: {}", t.trim());
             if let Err(e) = paste::paste_text(t.trim()) {
-                emit_state(app, "error", Some(t.trim().to_string()), Some(format!("Paste failed: {}", e)), Some(duration_ms));
+                emit_state(app, "error", Some(t.trim().to_string()), Some("couldn't paste — check accessibility".to_string()), Some(duration_ms));
             } else {
                 emit_state(app, "complete", Some(t.trim().to_string()), None, Some(duration_ms));
             }
