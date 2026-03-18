@@ -4,7 +4,7 @@ import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-shell'
 import { getSetting, setSetting, deleteSetting } from '@/lib/settings'
 import { STYLE_OPTIONS, getPromptByStyle } from '@/lib/dictation-styles'
-import { HOTKEY_OPTIONS } from '@/lib/hotkeys'
+import { getHotkeySymbol, getHotkeyLabel } from '@/lib/hotkeys'
 import { checkForUpdates, type UpdateInfo } from '@/lib/updates'
 import { Loader2, Check, ChevronDown, ExternalLink } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
@@ -82,6 +82,51 @@ function Select({ value, onChange, children }: {
 			</select>
 			<ChevronDown size={10} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/30" />
 		</div>
+	)
+}
+
+function KeyRecorder({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+	const [recording, setRecording] = useState(false)
+
+	useEffect(() => {
+		if (!recording) return
+
+		function handleKey(e: KeyboardEvent) {
+			e.preventDefault()
+			e.stopPropagation()
+			const code = e.code
+			if (code === 'Escape') {
+				setRecording(false)
+				return
+			}
+			onChange(code)
+			setRecording(false)
+		}
+
+		window.addEventListener('keydown', handleKey, true)
+		return () => window.removeEventListener('keydown', handleKey, true)
+	}, [recording, onChange])
+
+	return (
+		<button
+			onClick={() => setRecording(true)}
+			className={`flex h-7 w-full items-center justify-between rounded-md border px-2 text-[11px] transition-colors ${
+				recording
+					? 'border-foreground/30 bg-foreground/5 text-foreground/90'
+					: 'border-border/60 bg-white/[0.02] text-foreground/90 hover:border-border'
+			}`}
+		>
+			{recording ? (
+				<span className="animate-pulse text-muted-foreground/60">press a key...</span>
+			) : (
+				<>
+					<span>{getHotkeyLabel(value)}</span>
+					<kbd className="rounded border border-border/40 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium text-foreground/50">
+						{getHotkeySymbol(value)}
+					</kbd>
+				</>
+			)}
+		</button>
 	)
 }
 
@@ -209,15 +254,14 @@ export function SettingsPage() {
 
 				{/* Trigger */}
 				<Row label="trigger">
-					<Select value={hotkey} onChange={async (v) => {
-						setHotkey(v)
-						await setSetting('hotkey', v)
-						await invoke('set_hotkey', { key: v })
-					}}>
-						{HOTKEY_OPTIONS.map((o) => (
-							<option key={o.value} value={o.value}>{o.label}</option>
-						))}
-					</Select>
+					<KeyRecorder
+						value={hotkey}
+						onChange={async (code) => {
+							setHotkey(code)
+							await setSetting('hotkey', code)
+							await invoke('set_hotkey', { key: code })
+						}}
+					/>
 					<p className="text-[10px] text-muted-foreground/50">hold to talk, release to paste</p>
 				</Row>
 

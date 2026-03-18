@@ -23,32 +23,48 @@ impl Default for HotkeyConfig {
     }
 }
 
-// macOS keycodes
+// macOS keycodes — mapped from JavaScript event.code values
 pub fn config_to_keycode(s: &str) -> u16 {
     match s {
-        "RightAlt" => 61,
-        "LeftAlt" => 58,
-        "RightControl" => 62,
-        "LeftControl" => 59,
-        "RightShift" => 60,
-        "LeftShift" => 56,
-        "RightMeta" | "RightCmd" => 54,
-        "F5" => 96,
-        "F6" => 97,
-        "F7" => 98,
-        "F8" => 100,
-        "F9" => 101,
-        "F10" => 109,
-        "F11" => 103,
-        "F12" => 111,
-        "F13" => 105,
-        "F14" => 107,
-        "F15" => 113,
-        "F16" => 106,
-        "F17" => 64,
-        "F18" => 79,
-        "F19" => 80,
-        _ => 61,
+        // Modifiers
+        "RightAlt" | "AltRight" => 61,
+        "LeftAlt" | "AltLeft" => 58,
+        "RightControl" | "ControlRight" => 62,
+        "LeftControl" | "ControlLeft" => 59,
+        "RightShift" | "ShiftRight" => 60,
+        "LeftShift" | "ShiftLeft" => 56,
+        "RightMeta" | "RightCmd" | "MetaRight" => 54,
+        "LeftMeta" | "LeftCmd" | "MetaLeft" => 55,
+
+        // Function keys
+        "F1" => 122, "F2" => 120, "F3" => 99, "F4" => 118,
+        "F5" => 96, "F6" => 97, "F7" => 98, "F8" => 100,
+        "F9" => 101, "F10" => 109, "F11" => 103, "F12" => 111,
+        "F13" => 105, "F14" => 107, "F15" => 113,
+        "F16" => 106, "F17" => 64, "F18" => 79, "F19" => 80, "F20" => 90,
+
+        // Letters
+        "KeyA" => 0, "KeyB" => 11, "KeyC" => 8, "KeyD" => 2,
+        "KeyE" => 14, "KeyF" => 3, "KeyG" => 5, "KeyH" => 4,
+        "KeyI" => 34, "KeyJ" => 38, "KeyK" => 40, "KeyL" => 37,
+        "KeyM" => 46, "KeyN" => 45, "KeyO" => 31, "KeyP" => 35,
+        "KeyQ" => 12, "KeyR" => 15, "KeyS" => 1, "KeyT" => 17,
+        "KeyU" => 32, "KeyV" => 9, "KeyW" => 13, "KeyX" => 7,
+        "KeyY" => 16, "KeyZ" => 6,
+
+        // Digits
+        "Digit0" => 29, "Digit1" => 18, "Digit2" => 19, "Digit3" => 20,
+        "Digit4" => 21, "Digit5" => 23, "Digit6" => 22, "Digit7" => 26,
+        "Digit8" => 28, "Digit9" => 25,
+
+        // Special
+        "Space" => 49,
+        "Tab" => 48,
+        "CapsLock" => 57,
+        "Backquote" => 50,
+        "Escape" => 53,
+
+        _ => 61, // default to RightAlt
     }
 }
 
