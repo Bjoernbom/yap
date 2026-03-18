@@ -11,7 +11,7 @@ export function Layout() {
 			>
 				<NavLink
 					to="/"
-					className="text-[13px] font-semibold tracking-tight text-foreground/90"
+					className="font-brand text-[15px] font-bold tracking-tight text-foreground/90"
 				>
 					yap
 				</NavLink>

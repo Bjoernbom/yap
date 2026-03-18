@@ -56,7 +56,9 @@ export function DictationBadge() {
 				{status === 'error' && (
 					<div className="h-1.5 w-1.5 rounded-full bg-destructive" />
 				)}
-				<span className="text-[11px] font-medium text-foreground/60">{message}</span>
+				<span className={`text-[11px] font-medium text-foreground/60 ${
+				message.startsWith('yap') ? 'font-brand' : ''
+			}`}>{message}</span>
 			</div>
 		</div>
 	)

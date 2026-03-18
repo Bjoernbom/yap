@@ -166,7 +166,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 				>
 					{step === 'welcome' && (
 						<>
-							<h1 className="text-[28px] font-bold tracking-tight text-foreground">
+							<h1 className="font-brand text-[36px] font-bold tracking-tight text-foreground">
 								yap
 							</h1>
 							<p className="mt-1.5 text-[13px] font-medium text-muted-foreground/60">
@@ -320,7 +320,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 								onClick={handleComplete}
 								className="mt-10 w-full rounded-lg bg-foreground px-5 py-2.5 text-[12px] font-medium text-background transition-opacity hover:opacity-90"
 							>
-								start yapping
+								start <span className="font-brand">yapping</span>
 							</button>
 						</>
 					)}
