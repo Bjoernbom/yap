@@ -1,6 +1,6 @@
 [package]
 name = "yap"
-version = "0.2.0"
+version = "0.3.0"
 description = "Push-to-talk dictation tool"
 authors = ["bjornbom"]
 license = "MIT"
@@ -43,4 +43,5 @@ arboard = "3"
 
 # macOS accessibility permission check
 core-foundation = "0.9"
+tauri-plugin-updater = "2.10.0"
 

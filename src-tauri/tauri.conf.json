@@ -1,7 +1,7 @@
 {
 	"$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
 	"productName": "yap",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"identifier": "com.voicething.app",
 	"build": {
 		"frontendDist": "../dist",
@@ -53,6 +53,12 @@
 		"sql": {
 			"preload": [
 				"sqlite:voice-thing.db"
+			]
+		},
+		"updater": {
+			"pubkey": "RWTdWMWBqDRgKV6DIVbj8tRTiv8duNjx0/xQ3/SSmVLPUcPYOXJjOoEZ",
+			"endpoints": [
+				"https://github.com/Bjoernbom/yap/releases/latest/download/latest.json"
 			]
 		}
 	}

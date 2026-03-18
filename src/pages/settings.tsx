@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { open } from '@tauri-apps/plugin-shell'
+import { open as shellOpen } from '@tauri-apps/plugin-shell'
 import { getSetting, setSetting, deleteSetting } from '@/lib/settings'
 import { STYLE_OPTIONS, getPromptByStyle } from '@/lib/dictation-styles'
 import { getHotkeySymbol, getHotkeyLabel } from '@/lib/hotkeys'
-import { checkForUpdates, type UpdateInfo } from '@/lib/updates'
+import { checkForUpdates, downloadAndInstallUpdate, type UpdateInfo } from '@/lib/updates'
 import { Loader2, Check, ChevronDown, ExternalLink } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 
@@ -189,6 +189,7 @@ export function SettingsPage() {
 	const [accessibilityGranted, setAccessibilityGranted] = useState<boolean | null>(null)
 	const [autostart, setAutostart] = useState(false)
 	const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+	const [updating, setUpdating] = useState(false)
 
 	async function loadDevices() {
 		const devices = await navigator.mediaDevices.enumerateDevices()
@@ -484,13 +485,22 @@ export function SettingsPage() {
 							<span>no cloud</span>
 						</div>
 						<div className="flex justify-between">
-							<span>v0.2.0</span>
+							<span>v0.3.0</span>
 							{updateInfo?.available && (
 								<button
-									onClick={() => open(updateInfo.url)}
-									className="text-foreground/50 transition-colors hover:text-foreground/70"
+									onClick={async () => {
+										setUpdating(true)
+										try {
+											await downloadAndInstallUpdate()
+										} catch {
+											shellOpen(updateInfo.url)
+										}
+										setUpdating(false)
+									}}
+									disabled={updating}
+									className="text-foreground/50 transition-colors hover:text-foreground/70 disabled:opacity-50"
 								>
-									v{updateInfo.version} available
+									{updating ? 'updating...' : `v${updateInfo.version} — tap to update`}
 								</button>
 							)}
 						</div>

@@ -1,5 +1,5 @@
-const REPO = 'Bjoernbom/yap'
-const CURRENT_VERSION = '0.2.0'
+import { check } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 
 export interface UpdateInfo {
 	available: boolean
@@ -7,14 +7,28 @@ export interface UpdateInfo {
 	url: string
 }
 
+export const CURRENT_VERSION = '0.3.0'
+
 export async function checkForUpdates(): Promise<UpdateInfo> {
-	const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
-	if (!res.ok) return { available: false, version: CURRENT_VERSION, url: '' }
-	const data = await res.json()
-	const latest = data.tag_name?.replace('v', '') || CURRENT_VERSION
-	return {
-		available: latest !== CURRENT_VERSION,
-		version: latest,
-		url: data.html_url || `https://github.com/${REPO}/releases/latest`,
+	try {
+		const update = await check()
+		if (update) {
+			return {
+				available: true,
+				version: update.version,
+				url: `https://github.com/Bjoernbom/yap/releases/tag/v${update.version}`,
+			}
+		}
+	} catch {
+		// Updater not available or network error
 	}
+	return { available: false, version: '', url: '' }
+}
+
+export async function downloadAndInstallUpdate(): Promise<void> {
+	const update = await check()
+	if (!update) return
+
+	await update.downloadAndInstall()
+	await relaunch()
 }
