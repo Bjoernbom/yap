@@ -57,95 +57,95 @@ export function OverlayPage() {
 	}
 
 	return (
-		<div
-			onMouseDown={() => getCurrentWindow().startDragging()}
-			onDoubleClick={openDashboard}
-			style={{
-				width: '100%',
-				height: '100%',
-				display: 'flex',
-				alignItems: 'stretch',
-				justifyContent: 'center',
-				cursor: 'grab',
-				userSelect: 'none',
-				overflow: 'hidden',
-				background: 'transparent',
-			}}
-		>
-			<div style={{
-				flex: 1,
-				display: 'flex',
-				alignItems: 'flex-end',
-				justifyContent: 'center',
-				paddingBottom: '7px',
-				background: '#000000',
-				borderRadius: '0 0 12px 12px',
-			}}>
-			<div style={{ display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
-				<div style={{ position: 'relative', width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-					{status === 'listening' && (
-						<>
-							<div style={{
-								position: 'absolute', width: '12px', height: '12px', borderRadius: '50%',
-								background: 'rgba(255, 64, 64, 0.25)',
-								animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
-							}} />
-							<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff4040' }} />
-						</>
-					)}
-					{status === 'locked' && (
-						<>
-							<div style={{
-								position: 'absolute', width: '12px', height: '12px', borderRadius: '50%',
-								background: 'rgba(245, 158, 11, 0.25)',
-								animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
-							}} />
-							<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
-						</>
-					)}
-					{status === 'transcribing' && (
-						<div style={{
-							width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b',
-							animation: 'pulse 0.7s ease-in-out infinite',
-						}} />
-					)}
-					{status === 'complete' && (
-						<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
-					)}
-					{status === 'error' && (
-						<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
-					)}
-					{status === 'idle' && (
-						<div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#3f3f46' }} />
-					)}
-				</div>
-
-				<span style={{
-					fontSize: '10px', fontWeight: 500, letterSpacing: '-0.01em',
-					fontFamily: "'Pixelify Sans Variable', 'Geist Variable', sans-serif",
-					color: isActive ? 'rgba(250,250,250,0.85)' : 'rgba(250,250,250,0.25)',
-					transition: 'color 200ms',
-				}}>
-					{message}
-				</span>
-
-				{status === 'listening' && elapsed > 0 && (
-					<span style={{
-						fontSize: '9px', fontWeight: 500,
-						fontFamily: "'Pixelify Sans Variable', 'Geist Variable', sans-serif",
-						fontVariantNumeric: 'tabular-nums',
-						color: 'rgba(250,250,250,0.2)',
-					}}>
-						{elapsed.toFixed(1)}s
-					</span>
-				)}
-			</div>
-
+		<>
 			<style>{`
+				*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; border: none; outline: none; }
+				html, body, #root { background: transparent !important; overflow: hidden; width: 100%; height: 100%; }
 				@keyframes ping { 75%, 100% { transform: scale(2.5); opacity: 0; } }
 				@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 			`}</style>
-		</div>
-		</div>
+			<div
+				onMouseDown={() => getCurrentWindow().startDragging()}
+				onDoubleClick={openDashboard}
+				style={{
+					position: 'absolute',
+					inset: 0,
+					display: 'flex',
+					alignItems: 'stretch',
+					justifyContent: 'center',
+					cursor: 'grab',
+					userSelect: 'none',
+				}}
+			>
+				<div style={{
+					flex: 1,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					background: '#000000',
+					borderRadius: '0 0 12px 12px',
+				}}>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+						<div style={{ position: 'relative', width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+							{status === 'listening' && (
+								<>
+									<div style={{
+										position: 'absolute', width: '12px', height: '12px', borderRadius: '50%',
+										background: 'rgba(255, 64, 64, 0.25)',
+										animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
+									}} />
+									<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff4040' }} />
+								</>
+							)}
+							{status === 'locked' && (
+								<>
+									<div style={{
+										position: 'absolute', width: '12px', height: '12px', borderRadius: '50%',
+										background: 'rgba(245, 158, 11, 0.25)',
+										animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+									}} />
+									<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
+								</>
+							)}
+							{status === 'transcribing' && (
+								<div style={{
+									width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b',
+									animation: 'pulse 0.7s ease-in-out infinite',
+								}} />
+							)}
+							{status === 'complete' && (
+								<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
+							)}
+							{status === 'error' && (
+								<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
+							)}
+							{status === 'idle' && (
+								<div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#3f3f46' }} />
+							)}
+						</div>
+
+						<span style={{
+							fontSize: '10px', fontWeight: 500, letterSpacing: '-0.01em',
+							fontFamily: "'Pixelify Sans Variable', 'Geist Variable', sans-serif",
+							color: isActive ? 'rgba(250,250,250,0.85)' : 'rgba(250,250,250,0.25)',
+							transition: 'color 200ms',
+						}}>
+							{message}
+						</span>
+
+						{status === 'listening' && elapsed > 0 && (
+							<span style={{
+								fontSize: '9px', fontWeight: 500,
+								fontFamily: "'Pixelify Sans Variable', 'Geist Variable', sans-serif",
+								fontVariantNumeric: 'tabular-nums',
+								color: 'rgba(250,250,250,0.2)',
+							}}>
+								{elapsed.toFixed(1)}s
+							</span>
+						)}
+					</div>
+				</div>
+			</div>
+		</>
 	)
 }

@@ -26,7 +26,13 @@ export function App() {
 		// Overlay window: transparent background, no init needed
 		if (isOverlay) {
 			document.documentElement.style.background = 'transparent'
+			document.documentElement.style.margin = '0'
+			document.documentElement.style.padding = '0'
+			document.documentElement.style.overflow = 'hidden'
 			document.body.style.background = 'transparent'
+			document.body.style.margin = '0'
+			document.body.style.padding = '0'
+			document.body.style.overflow = 'hidden'
 			setReady(true)
 			return
 		}
