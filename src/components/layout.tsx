@@ -21,7 +21,7 @@ export function Layout() {
 						`text-[11px] font-medium transition-colors ${
 							isActive
 								? 'text-foreground/70'
-								: 'text-muted-foreground/40 hover:text-foreground/50'
+								: 'text-muted-foreground/55 hover:text-foreground/50'
 						}`
 					}
 				>

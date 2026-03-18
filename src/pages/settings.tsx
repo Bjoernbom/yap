@@ -58,7 +58,7 @@ function Row({ label, children, status }: {
 					</span>
 				)}
 				{status === 'loading' && (
-					<Loader2 size={9} className="animate-spin text-muted-foreground/40" />
+					<Loader2 size={9} className="animate-spin text-muted-foreground/55" />
 				)}
 			</div>
 			{children}
@@ -80,7 +80,7 @@ function Select({ value, onChange, children }: {
 			>
 				{children}
 			</select>
-			<ChevronDown size={10} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/30" />
+			<ChevronDown size={10} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
 		</div>
 	)
 }
@@ -244,7 +244,7 @@ export function SettingsPage() {
 							</button>
 							<button
 								onClick={() => invoke('open_accessibility_settings')}
-								className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 hover:text-foreground/60"
+								className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/55 hover:text-foreground/60"
 							>
 								<ExternalLink size={11} />
 							</button>
@@ -342,7 +342,7 @@ export function SettingsPage() {
 							>
 								<span>{opt.label}</span>
 								{opt.badge && (
-									<span className="ml-1 text-[8px] text-muted-foreground/30">{opt.badge}</span>
+									<span className="ml-1 text-[8px] text-muted-foreground/50">{opt.badge}</span>
 								)}
 							</button>
 						))}
@@ -371,7 +371,7 @@ export function SettingsPage() {
 					{downloading && (
 						<div className="mt-1.5 space-y-1">
 							<Progress value={progressPercent} className="h-1" />
-							<p className="text-[10px] tabular-nums text-muted-foreground/40">{progressPercent}%</p>
+							<p className="text-[10px] tabular-nums text-muted-foreground/55">{progressPercent}%</p>
 						</div>
 					)}
 
@@ -424,7 +424,7 @@ export function SettingsPage() {
 
 				{/* Footer info */}
 				<div className="px-3.5 py-3">
-					<div className="space-y-1.5 text-[10px] text-muted-foreground/40">
+					<div className="space-y-1.5 text-[10px] text-muted-foreground/55">
 						<div className="flex justify-between">
 							<span>accessibility</span>
 							<span className={accessibilityGranted ? 'text-success/60' : 'text-destructive/60'}>

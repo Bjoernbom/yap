@@ -172,7 +172,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 							<p className="mt-1.5 text-[13px] font-medium text-muted-foreground/60">
 								push-to-talk dictation
 							</p>
-							<p className="mt-6 text-[12px] leading-relaxed text-muted-foreground/40">
+							<p className="mt-6 text-[12px] leading-relaxed text-muted-foreground/60">
 								hold a key, speak, release — text appears wherever your cursor is
 							</p>
 							<button
@@ -215,10 +215,10 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 							<div className="mt-8 w-full space-y-3">
 								<div className="flex items-center justify-between rounded-lg border border-border/40 px-4 py-3">
 									<div className="flex items-center gap-3">
-										<Shield size={16} className={accessibilityGranted ? 'text-success' : 'text-muted-foreground/40'} />
+										<Shield size={16} className={accessibilityGranted ? 'text-success' : 'text-muted-foreground/60'} />
 										<div className="text-left">
 											<p className="text-[12px] font-medium text-foreground/80">accessibility</p>
-											<p className="text-[10px] text-muted-foreground/40">for hotkey + paste</p>
+											<p className="text-[10px] text-muted-foreground/60">for hotkey + paste</p>
 										</div>
 									</div>
 									{accessibilityGranted ? (
@@ -227,7 +227,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 										<button
 											onClick={handleGrantAccessibility}
 											disabled={checkingAccessibility}
-											className="rounded-md bg-foreground/10 px-3 py-1.5 text-[10px] font-medium text-foreground/70 transition-colors hover:bg-foreground/15 disabled:opacity-50"
+											className="rounded-md bg-foreground/10 px-3 py-1.5 text-[10px] font-medium text-foreground/80 transition-colors hover:bg-foreground/15 disabled:opacity-50"
 										>
 											{checkingAccessibility ? 'waiting...' : 'grant'}
 										</button>
@@ -236,10 +236,10 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 
 								<div className="flex items-center justify-between rounded-lg border border-border/40 px-4 py-3">
 									<div className="flex items-center gap-3">
-										<Mic size={16} className={micGranted ? 'text-success' : 'text-muted-foreground/40'} />
+										<Mic size={16} className={micGranted ? 'text-success' : 'text-muted-foreground/60'} />
 										<div className="text-left">
 											<p className="text-[12px] font-medium text-foreground/80">microphone</p>
-											<p className="text-[10px] text-muted-foreground/40">to hear your voice</p>
+											<p className="text-[10px] text-muted-foreground/60">to hear your voice</p>
 										</div>
 									</div>
 									{micGranted ? (
@@ -248,7 +248,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 										<button
 											onClick={handleGrantMic}
 											disabled={checkingMic}
-											className="rounded-md bg-foreground/10 px-3 py-1.5 text-[10px] font-medium text-foreground/70 transition-colors hover:bg-foreground/15 disabled:opacity-50"
+											className="rounded-md bg-foreground/10 px-3 py-1.5 text-[10px] font-medium text-foreground/80 transition-colors hover:bg-foreground/15 disabled:opacity-50"
 										>
 											{checkingMic ? 'waiting...' : 'connect'}
 										</button>
@@ -271,7 +271,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 							<h2 className="text-[18px] font-semibold tracking-tight text-foreground">
 								downloading your brain
 							</h2>
-							<p className="mt-2 text-[11px] text-muted-foreground/40">
+							<p className="mt-2 text-[11px] text-muted-foreground/60">
 								large-v3-turbo model (1.6 GB)
 							</p>
 
@@ -283,7 +283,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 											setDownloadError(null)
 											setDownloadComplete(false)
 										}}
-										className="rounded-md bg-foreground/10 px-4 py-2 text-[11px] font-medium text-foreground/70 transition-colors hover:bg-foreground/15"
+										className="rounded-md bg-foreground/10 px-4 py-2 text-[11px] font-medium text-foreground/80 transition-colors hover:bg-foreground/15"
 									>
 										retry
 									</button>
@@ -291,13 +291,13 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 							) : (
 								<div className="mt-8 w-full space-y-2">
 									<Progress value={downloadComplete ? 100 : progressPercent} className="h-1.5" />
-									<p className="text-[10px] tabular-nums text-muted-foreground/40">
+									<p className="text-[10px] tabular-nums text-muted-foreground/60">
 										{downloadComplete ? 'done' : `${progressPercent}%`}
 									</p>
 								</div>
 							)}
 
-							<p className="mt-6 text-[10px] text-muted-foreground/25">
+							<p className="mt-6 text-[10px] text-muted-foreground/50">
 								everything runs locally — no cloud
 							</p>
 						</>
@@ -312,7 +312,7 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 								<kbd className="rounded-lg border border-border/40 bg-white/[0.03] px-4 py-2 text-[14px] font-medium text-foreground/60">
 									⌥R
 								</kbd>
-								<p className="text-[11px] text-muted-foreground/40">
+								<p className="text-[11px] text-muted-foreground/60">
 									hold Right Option and start talking
 								</p>
 							</div>
@@ -336,8 +336,8 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 							s === step
 								? 'w-4 bg-foreground/40'
 								: STEPS.indexOf(s) < STEPS.indexOf(step)
-									? 'w-1 bg-foreground/20'
-									: 'w-1 bg-foreground/8'
+									? 'w-1 bg-foreground/30'
+									: 'w-1 bg-foreground/15'
 						}`}
 					/>
 				))}

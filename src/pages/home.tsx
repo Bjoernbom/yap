@@ -26,7 +26,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 	return (
 		<div className="flex-1 text-center">
 			<div className="text-[15px] font-semibold tabular-nums text-foreground/80">{value}</div>
-			<div className="mt-0.5 text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">{label}</div>
+			<div className="mt-0.5 text-[9px] font-medium uppercase tracking-widest text-muted-foreground/50">{label}</div>
 		</div>
 	)
 }
@@ -49,11 +49,11 @@ function DictationItem({ item }: { item: Dictation }) {
 						{item.text}
 					</p>
 					<div className="mt-1 flex items-center gap-1.5">
-						<span className="text-[10px] tabular-nums text-muted-foreground/40">
+						<span className="text-[10px] tabular-nums text-muted-foreground/55">
 							{formatTime(item.createdAt)}
 						</span>
 						<span className="text-[10px] text-muted-foreground/15">/</span>
-						<span className="text-[10px] tabular-nums text-muted-foreground/40">
+						<span className="text-[10px] tabular-nums text-muted-foreground/55">
 							{formatDuration(item.durationMs)}
 						</span>
 					</div>
@@ -61,7 +61,7 @@ function DictationItem({ item }: { item: Dictation }) {
 				<div className="flex shrink-0 gap-0.5 pt-0.5 opacity-0 transition-opacity group-hover:opacity-100">
 					<button
 						onClick={handleCopy}
-						className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 transition-colors hover:bg-white/[0.06] hover:text-foreground/60"
+						className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/55 transition-colors hover:bg-white/[0.06] hover:text-foreground/70"
 					>
 						{copied
 							? <Check size={12} className="text-success" />
@@ -70,7 +70,7 @@ function DictationItem({ item }: { item: Dictation }) {
 					</button>
 					<button
 						onClick={() => deleteDictation(item.id)}
-						className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/20 transition-colors hover:bg-destructive/10 hover:text-destructive/60"
+						className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/55 transition-colors hover:bg-destructive/10 hover:text-destructive/60"
 					>
 						<Trash2 size={12} />
 					</button>
@@ -123,14 +123,14 @@ export function HomePage() {
 			<div className="flex items-center border-b border-border/20 px-3.5 py-3">
 				<div className="flex flex-col gap-0.5">
 					<div className="flex items-center gap-1.5">
-						<kbd className="rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/50">
+						<kbd className="rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/70">
 							{hotkeySymbol}
 						</kbd>
-						<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">
+						<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/50">
 							trigger
 						</span>
 					</div>
-					<span className="text-[8px] text-muted-foreground/20">
+					<span className="text-[8px] text-muted-foreground/55">
 						double-tap to lock on
 					</span>
 				</div>
@@ -150,11 +150,11 @@ export function HomePage() {
 			{dictations.length > 0 && (
 				<div className="space-y-1 px-3.5 py-2">
 					<div className="group/header flex items-center justify-between">
-						<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/30">
+						<span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/50">
 							recent
 						</span>
 						<div className="flex items-center gap-2">
-							<span className="text-[9px] tabular-nums text-muted-foreground/20">
+							<span className="text-[9px] tabular-nums text-muted-foreground/55">
 								{dictations.length}
 							</span>
 							<button
@@ -164,7 +164,7 @@ export function HomePage() {
 										setSearch('')
 									}
 								}}
-								className="text-[9px] text-muted-foreground/20 opacity-0 transition-opacity hover:text-destructive/50 group-hover/header:opacity-100"
+								className="text-[9px] text-muted-foreground/55 opacity-0 transition-opacity hover:text-destructive/50 group-hover/header:opacity-100"
 							>
 								clear
 							</button>
@@ -175,7 +175,7 @@ export function HomePage() {
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="search..."
-						className="w-full rounded bg-white/[0.03] px-2 py-1 text-[11px] text-foreground/70 placeholder:text-muted-foreground/20 focus:outline-none"
+						className="w-full rounded bg-white/[0.03] px-2 py-1 text-[11px] text-foreground/70 placeholder:text-muted-foreground/55 focus:outline-none"
 					/>
 				</div>
 			)}
@@ -185,20 +185,20 @@ export function HomePage() {
 				{dictations.length === 0 ? (
 					<div className="flex h-full flex-col items-center justify-center gap-5 px-10 text-center">
 						<div className="flex gap-1.5">
-							<div className="h-2 w-2 rounded-full bg-muted-foreground/15" />
 							<div className="h-2 w-2 rounded-full bg-muted-foreground/25" />
-							<div className="h-2 w-2 rounded-full bg-muted-foreground/15" />
+							<div className="h-2 w-2 rounded-full bg-muted-foreground/25" />
+							<div className="h-2 w-2 rounded-full bg-muted-foreground/25" />
 						</div>
 						<div className="space-y-2">
-							<p className="text-[14px] font-medium text-foreground/60">
+							<p className="text-[14px] font-medium text-foreground/70">
 								nothing here yet
 							</p>
 							<p className="text-[11px] leading-relaxed text-muted-foreground/35">
-								hold <kbd className="mx-0.5 rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/40">{hotkeySymbol}</kbd> and start talking
+								hold <kbd className="mx-0.5 rounded border border-border/40 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-foreground/70">{hotkeySymbol}</kbd> and start talking
 								<br />
-								<span className="text-muted-foreground/25">text appears wherever your cursor is</span>
+								<span className="text-muted-foreground/50">text appears wherever your cursor is</span>
 								<br />
-								<span className="text-muted-foreground/20">double-tap to lock recording on</span>
+								<span className="text-muted-foreground/55">double-tap to lock recording on</span>
 							</p>
 						</div>
 					</div>
