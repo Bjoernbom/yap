@@ -72,11 +72,8 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 			try {
 				await invoke('download_model', { modelName: 'large-v3-turbo' })
 				if (!cancelled) {
-					setDownloadComplete(true)
 					await setSetting('whisper_model', 'large-v3-turbo')
-					setTimeout(() => {
-						if (!cancelled) goTo('ready')
-					}, 600)
+					setDownloadComplete(true)
 				}
 			} catch (e) {
 				if (!cancelled) setDownloadError(String(e))
@@ -85,7 +82,14 @@ export function OnboardingPage({ onComplete }: { onComplete: () => void }) {
 
 		startDownload()
 		return () => { cancelled = true }
-	}, [step, downloadComplete, goTo])
+	}, [step, downloadComplete])
+
+	// Auto-advance after download completes
+	useEffect(() => {
+		if (!downloadComplete || step !== 'model') return
+		const timer = setTimeout(() => goTo('ready'), 600)
+		return () => clearTimeout(timer)
+	}, [downloadComplete, step, goTo])
 
 	// Listen for download progress
 	useEffect(() => {
