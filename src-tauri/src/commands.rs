@@ -173,6 +173,12 @@ pub fn configure_overlay_window(app: tauri::AppHandle) -> Result<(), String> {
                         std::mem::transmute(objc_msgSend as *const ());
                     f(win, sel, 0);
 
+                    // setHasShadow: NO — remove grey border/shadow
+                    let sel = sel_registerName(b"setHasShadow:\0".as_ptr());
+                    let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, i8) =
+                        std::mem::transmute(objc_msgSend as *const ());
+                    f(win, sel, 0);
+
                     // setBackgroundColor: [NSColor clearColor]
                     let ns_color_class = objc_getClass(b"NSColor\0".as_ptr());
                     if !ns_color_class.is_null() {
@@ -185,8 +191,85 @@ pub fn configure_overlay_window(app: tauri::AppHandle) -> Result<(), String> {
                         let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, *mut std::ffi::c_void) =
                             std::mem::transmute(objc_msgSend as *const ());
                         f(win, sel, clear_color);
-                        eprintln!("[overlay] set transparent background");
                     }
+
+                    // Make contentView transparent too
+                    let sel = sel_registerName(b"contentView\0".as_ptr());
+                    let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void) -> *mut std::ffi::c_void =
+                        std::mem::transmute(objc_msgSend as *const ());
+                    let content_view = f(win, sel);
+
+                    if !content_view.is_null() {
+                        // contentView.wantsLayer = YES
+                        let sel = sel_registerName(b"setWantsLayer:\0".as_ptr());
+                        let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, i8) =
+                            std::mem::transmute(objc_msgSend as *const ());
+                        f(content_view, sel, 1);
+
+                        // contentView.layer.backgroundColor = nil (transparent)
+                        let sel = sel_registerName(b"layer\0".as_ptr());
+                        let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void) -> *mut std::ffi::c_void =
+                            std::mem::transmute(objc_msgSend as *const ());
+                        let layer = f(content_view, sel);
+
+                        if !layer.is_null() {
+                            // CGColorCreateGenericRGB(0,0,0,0) for transparent
+                            extern "C" {
+                                fn CGColorCreateGenericRGB(r: f64, g: f64, b: f64, a: f64) -> *mut std::ffi::c_void;
+                            }
+                            let transparent_cg = CGColorCreateGenericRGB(0.0, 0.0, 0.0, 0.0);
+                            let sel = sel_registerName(b"setBackgroundColor:\0".as_ptr());
+                            let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, *mut std::ffi::c_void) =
+                                std::mem::transmute(objc_msgSend as *const ());
+                            f(layer, sel, transparent_cg);
+                        }
+
+                        // Find WKWebView in subviews and disable its background
+                        let sel = sel_registerName(b"subviews\0".as_ptr());
+                        let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void) -> *mut std::ffi::c_void =
+                            std::mem::transmute(objc_msgSend as *const ());
+                        let subviews = f(content_view, sel);
+
+                        if !subviews.is_null() {
+                            let sel = sel_registerName(b"count\0".as_ptr());
+                            let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void) -> u64 =
+                                std::mem::transmute(objc_msgSend as *const ());
+                            let count = f(subviews, sel);
+
+                            for i in 0..count {
+                                let sel = sel_registerName(b"objectAtIndex:\0".as_ptr());
+                                let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, u64) -> *mut std::ffi::c_void =
+                                    std::mem::transmute(objc_msgSend as *const ());
+                                let subview = f(subviews, sel, i);
+
+                                if !subview.is_null() {
+                                    // Try setValue:NO forKey:drawsBackground on each subview
+                                    let key_class = objc_getClass(b"NSString\0".as_ptr());
+                                    if !key_class.is_null() {
+                                        let sel = sel_registerName(b"stringWithUTF8String:\0".as_ptr());
+                                        let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, *const u8) -> *mut std::ffi::c_void =
+                                            std::mem::transmute(objc_msgSend as *const ());
+                                        let key = f(key_class, sel, b"drawsBackground\0".as_ptr());
+
+                                        let ns_number_class = objc_getClass(b"NSNumber\0".as_ptr());
+                                        if !ns_number_class.is_null() {
+                                            let sel = sel_registerName(b"numberWithBool:\0".as_ptr());
+                                            let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, i8) -> *mut std::ffi::c_void =
+                                                std::mem::transmute(objc_msgSend as *const ());
+                                            let no_val = f(ns_number_class, sel, 0);
+
+                                            let sel = sel_registerName(b"setValue:forKey:\0".as_ptr());
+                                            let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, *mut std::ffi::c_void, *mut std::ffi::c_void) =
+                                                std::mem::transmute(objc_msgSend as *const ());
+                                            f(subview, sel, no_val, key);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    eprintln!("[overlay] set fully transparent background");
 
                     // Verify
                     let sel = sel_registerName(b"level\0".as_ptr());
