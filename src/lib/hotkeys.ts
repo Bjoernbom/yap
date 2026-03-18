@@ -1,51 +1,80 @@
 // Maps JavaScript event.code to a display symbol
 const KEY_SYMBOLS: Record<string, string> = {
-	// Modifiers
 	AltRight: '⌥R', AltLeft: '⌥L',
 	ControlRight: '⌃R', ControlLeft: '⌃L',
 	ShiftRight: '⇧R', ShiftLeft: '⇧L',
 	MetaRight: '⌘R', MetaLeft: '⌘L',
-	// Legacy names
 	RightAlt: '⌥R', LeftAlt: '⌥L',
 	RightControl: '⌃R', LeftControl: '⌃L',
 	RightShift: '⇧R', LeftShift: '⇧L',
 	RightMeta: '⌘R', LeftMeta: '⌘L',
-	// Function keys
-	F1: 'F1', F2: 'F2', F3: 'F3', F4: 'F4', F5: 'F5',
-	F6: 'F6', F7: 'F7', F8: 'F8', F9: 'F9', F10: 'F10',
-	F11: 'F11', F12: 'F12', F13: 'F13', F14: 'F14', F15: 'F15',
-	F16: 'F16', F17: 'F17', F18: 'F18', F19: 'F19', F20: 'F20',
-	// Special
-	Space: 'Space', Tab: 'Tab', CapsLock: 'Caps', Backquote: '`', Escape: 'Esc',
+	Space: '␣', Tab: '⇥', CapsLock: '⇪', Backquote: '`', Escape: '⎋',
 }
 
-const KEY_LABELS: Record<string, string> = {
-	AltRight: 'Right Option', AltLeft: 'Left Option',
-	ControlRight: 'Right Control', ControlLeft: 'Left Control',
-	ShiftRight: 'Right Shift', ShiftLeft: 'Left Shift',
-	MetaRight: 'Right Cmd', MetaLeft: 'Left Cmd',
-	RightAlt: 'Right Option', LeftAlt: 'Left Option',
-	RightControl: 'Right Control', LeftControl: 'Left Control',
-	RightShift: 'Right Shift', LeftShift: 'Left Shift',
-	RightMeta: 'Right Cmd', LeftMeta: 'Left Cmd',
-	Space: 'Space', Tab: 'Tab', CapsLock: 'Caps Lock', Backquote: 'Backtick', Escape: 'Escape',
+const MODIFIER_SYMBOLS: Record<string, string> = {
+	MetaLeft: '⌘', MetaRight: '⌘',
+	AltLeft: '⌥', AltRight: '⌥',
+	ControlLeft: '⌃', ControlRight: '⌃',
+	ShiftLeft: '⇧', ShiftRight: '⇧',
 }
 
-export function getHotkeySymbol(code: string): string {
+function codeToSymbol(code: string): string {
 	if (KEY_SYMBOLS[code]) return KEY_SYMBOLS[code]
-	// Function keys
 	if (code.startsWith('F') && /^F\d+$/.test(code)) return code
-	// Letters: KeyA → A
 	if (code.startsWith('Key')) return code.slice(3)
-	// Digits: Digit0 → 0
 	if (code.startsWith('Digit')) return code.slice(5)
 	return code
 }
 
-export function getHotkeyLabel(code: string): string {
-	if (KEY_LABELS[code]) return KEY_LABELS[code]
+function codeToLabel(code: string): string {
+	const labels: Record<string, string> = {
+		AltRight: 'Right Option', AltLeft: 'Left Option',
+		ControlRight: 'Right Control', ControlLeft: 'Left Control',
+		ShiftRight: 'Right Shift', ShiftLeft: 'Left Shift',
+		MetaRight: 'Right Cmd', MetaLeft: 'Left Cmd',
+		RightAlt: 'Right Option', LeftAlt: 'Left Option',
+		Space: 'Space', Tab: 'Tab', CapsLock: 'Caps Lock', Backquote: 'Backtick', Escape: 'Escape',
+	}
+	if (labels[code]) return labels[code]
 	if (code.startsWith('F') && /^F\d+$/.test(code)) return code
 	if (code.startsWith('Key')) return code.slice(3)
 	if (code.startsWith('Digit')) return code.slice(5)
 	return code
+}
+
+function isModifier(code: string): boolean {
+	return code.startsWith('Meta') || code.startsWith('Alt') || code.startsWith('Control') || code.startsWith('Shift')
+}
+
+/**
+ * Get display symbol for a hotkey combo string like "MetaRight+KeyR" or "AltRight"
+ */
+export function getHotkeySymbol(combo: string): string {
+	const parts = combo.split('+')
+	if (parts.length === 1) return codeToSymbol(parts[0])
+
+	const modSymbols: string[] = []
+	let primary = ''
+	for (const part of parts) {
+		if (isModifier(part)) {
+			const sym = MODIFIER_SYMBOLS[part]
+			if (sym && !modSymbols.includes(sym)) modSymbols.push(sym)
+		} else {
+			primary = codeToSymbol(part)
+		}
+	}
+
+	if (primary) return [...modSymbols, primary].join('')
+	// All modifiers — show the last one with its side
+	return codeToSymbol(parts[parts.length - 1])
+}
+
+/**
+ * Get human-readable label for a hotkey combo
+ */
+export function getHotkeyLabel(combo: string): string {
+	const parts = combo.split('+')
+	if (parts.length === 1) return codeToLabel(parts[0])
+
+	return parts.map(codeToLabel).join(' + ')
 }

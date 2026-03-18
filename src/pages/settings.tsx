@@ -85,27 +85,69 @@ function Select({ value, onChange, children }: {
 	)
 }
 
+function isModifierKey(code: string): boolean {
+	return code.startsWith('Meta') || code.startsWith('Alt') || code.startsWith('Control') || code.startsWith('Shift')
+}
+
 function KeyRecorder({ value, onChange }: { value: string; onChange: (code: string) => void }) {
 	const [recording, setRecording] = useState(false)
+	const [heldModifiers, setHeldModifiers] = useState<string[]>([])
 
 	useEffect(() => {
-		if (!recording) return
+		if (!recording) {
+			setHeldModifiers([])
+			return
+		}
 
-		function handleKey(e: KeyboardEvent) {
+		const mods = new Set<string>()
+
+		function handleKeyDown(e: KeyboardEvent) {
 			e.preventDefault()
 			e.stopPropagation()
-			const code = e.code
-			if (code === 'Escape') {
+
+			if (e.code === 'Escape') {
 				setRecording(false)
 				return
 			}
-			onChange(code)
-			setRecording(false)
+
+			if (isModifierKey(e.code)) {
+				mods.add(e.code)
+				setHeldModifiers([...mods])
+			} else {
+				// Non-modifier pressed → finalize combo
+				const combo = mods.size > 0
+					? [...mods, e.code].join('+')
+					: e.code
+				onChange(combo)
+				setRecording(false)
+			}
 		}
 
-		window.addEventListener('keydown', handleKey, true)
-		return () => window.removeEventListener('keydown', handleKey, true)
+		function handleKeyUp(e: KeyboardEvent) {
+			e.preventDefault()
+			e.stopPropagation()
+
+			if (isModifierKey(e.code) && mods.has(e.code)) {
+				// Modifier released without a primary key → use as lone modifier (or combo of modifiers)
+				const combo = [...mods].join('+')
+				if (combo) {
+					onChange(combo)
+					setRecording(false)
+				}
+			}
+		}
+
+		window.addEventListener('keydown', handleKeyDown, true)
+		window.addEventListener('keyup', handleKeyUp, true)
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown, true)
+			window.removeEventListener('keyup', handleKeyUp, true)
+		}
 	}, [recording, onChange])
+
+	const liveSymbol = heldModifiers.length > 0
+		? heldModifiers.map((m) => getHotkeySymbol(m)).join(' ')
+		: null
 
 	return (
 		<button
@@ -117,11 +159,13 @@ function KeyRecorder({ value, onChange }: { value: string; onChange: (code: stri
 			}`}
 		>
 			{recording ? (
-				<span className="animate-pulse text-muted-foreground/60">press a key...</span>
+				<span className="text-muted-foreground/60">
+					{liveSymbol ? <span className="text-foreground/80">{liveSymbol} + ...</span> : <span className="animate-pulse">press a key combo...</span>}
+				</span>
 			) : (
 				<>
 					<span>{getHotkeyLabel(value)}</span>
-					<kbd className="rounded border border-border/40 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium text-foreground/50">
+					<kbd className="rounded border border-border/40 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium text-foreground/70">
 						{getHotkeySymbol(value)}
 					</kbd>
 				</>

@@ -12,29 +12,45 @@ pub enum HotkeyEvent {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HotkeyConfig {
-    pub key: String,
+    pub key: String, // e.g. "AltRight" or "MetaRight+KeyR"
 }
 
 impl Default for HotkeyConfig {
     fn default() -> Self {
         Self {
-            key: "RightAlt".to_string(),
+            key: "AltRight".to_string(),
         }
     }
 }
 
-// macOS keycodes — mapped from JavaScript event.code values
-pub fn config_to_keycode(s: &str) -> u16 {
-    match s {
+/// Parsed hotkey combo: required modifier flags + a primary key
+#[derive(Debug, Clone)]
+struct ParsedHotkey {
+    /// Required CGEvent modifier flags (mask)
+    required_flags: u64,
+    /// The primary (non-modifier) keycode to detect, if any
+    primary_keycode: Option<u16>,
+    /// If the hotkey IS a lone modifier key (no primary key)
+    lone_modifier_keycode: Option<u16>,
+}
+
+// macOS modifier flag masks
+const FLAG_SHIFT: u64   = 0x00020000;
+const FLAG_CONTROL: u64 = 0x00040000;
+const FLAG_ALT: u64     = 0x00080000;
+const FLAG_CMD: u64     = 0x00100000;
+
+fn code_to_keycode(s: &str) -> Option<u16> {
+    Some(match s {
         // Modifiers
-        "RightAlt" | "AltRight" => 61,
-        "LeftAlt" | "AltLeft" => 58,
-        "RightControl" | "ControlRight" => 62,
-        "LeftControl" | "ControlLeft" => 59,
-        "RightShift" | "ShiftRight" => 60,
-        "LeftShift" | "ShiftLeft" => 56,
-        "RightMeta" | "RightCmd" | "MetaRight" => 54,
-        "LeftMeta" | "LeftCmd" | "MetaLeft" => 55,
+        "AltRight" | "RightAlt" => 61,
+        "AltLeft" | "LeftAlt" => 58,
+        "ControlRight" | "RightControl" => 62,
+        "ControlLeft" | "LeftControl" => 59,
+        "ShiftRight" | "RightShift" => 60,
+        "ShiftLeft" | "LeftShift" => 56,
+        "MetaRight" | "RightMeta" | "RightCmd" => 54,
+        "MetaLeft" | "LeftMeta" | "LeftCmd" => 55,
 
         // Function keys
         "F1" => 122, "F2" => 120, "F3" => 99, "F4" => 118,
@@ -64,12 +80,62 @@ pub fn config_to_keycode(s: &str) -> u16 {
         "Backquote" => 50,
         "Escape" => 53,
 
-        _ => 61, // default to RightAlt
+        _ => return None,
+    })
+}
+
+fn is_modifier_code(s: &str) -> bool {
+    matches!(s,
+        "AltRight" | "AltLeft" | "RightAlt" | "LeftAlt" |
+        "ControlRight" | "ControlLeft" | "RightControl" | "LeftControl" |
+        "ShiftRight" | "ShiftLeft" | "RightShift" | "LeftShift" |
+        "MetaRight" | "MetaLeft" | "RightMeta" | "LeftMeta" | "RightCmd" | "LeftCmd"
+    )
+}
+
+fn modifier_flag(s: &str) -> u64 {
+    match s {
+        "AltRight" | "AltLeft" | "RightAlt" | "LeftAlt" => FLAG_ALT,
+        "ControlRight" | "ControlLeft" | "RightControl" | "LeftControl" => FLAG_CONTROL,
+        "ShiftRight" | "ShiftLeft" | "RightShift" | "LeftShift" => FLAG_SHIFT,
+        "MetaRight" | "MetaLeft" | "RightMeta" | "LeftMeta" | "RightCmd" | "LeftCmd" => FLAG_CMD,
+        _ => 0,
     }
 }
 
-fn is_modifier_key(keycode: u16) -> bool {
+fn is_modifier_keycode(keycode: u16) -> bool {
     matches!(keycode, 54 | 55 | 56 | 58 | 59 | 60 | 61 | 62)
+}
+
+/// Parse "MetaRight+KeyR" or "AltRight" into a ParsedHotkey
+fn parse_hotkey(config: &str) -> ParsedHotkey {
+    let parts: Vec<&str> = config.split('+').collect();
+    let mut required_flags: u64 = 0;
+    let mut primary_keycode: Option<u16> = None;
+    let mut lone_modifier_keycode: Option<u16> = None;
+
+    for part in &parts {
+        if is_modifier_code(part) {
+            required_flags |= modifier_flag(part);
+        } else {
+            primary_keycode = code_to_keycode(part);
+        }
+    }
+
+    // If all parts are modifiers (e.g. "AltRight"), the last one is the "trigger"
+    if primary_keycode.is_none() {
+        if let Some(last) = parts.last() {
+            lone_modifier_keycode = code_to_keycode(last);
+            // For lone modifier, remove its flag from required (it IS the trigger)
+            required_flags &= !modifier_flag(last);
+        }
+    }
+
+    ParsedHotkey {
+        required_flags,
+        primary_keycode,
+        lone_modifier_keycode,
+    }
 }
 
 pub struct HotkeyListener {
@@ -199,75 +265,110 @@ unsafe extern "C" fn tap_callback(
 
     let ctx = &*(user_info as *const TapContext);
 
-    let target_keycode = {
+    let hotkey = {
         match ctx.config.lock() {
-            Ok(c) => config_to_keycode(&c.key),
+            Ok(c) => parse_hotkey(&c.key),
             Err(_) => return event,
         }
     };
 
     let keycode = ffi::CGEventGetIntegerValueField(event, ffi::kCGKeyboardEventKeycode) as u16;
+    let flags = ffi::CGEventGetFlags(event);
 
-    if keycode != target_keycode {
-        return event;
-    }
+    // Check if required modifier flags are active (mask out device-specific bits)
+    let modifier_flags = flags & (FLAG_SHIFT | FLAG_CONTROL | FLAG_ALT | FLAG_CMD);
+    let modifiers_match = (modifier_flags & hotkey.required_flags) == hotkey.required_flags;
 
-    let is_modifier = is_modifier_key(keycode);
+    if let Some(primary) = hotkey.primary_keycode {
+        // Combo hotkey: modifiers + primary key (e.g. Cmd+R)
+        if keycode != primary {
+            return event;
+        }
+        if !modifiers_match {
+            return event;
+        }
 
-    // Determine press/release
-    let (is_press, is_release) = if is_modifier {
-        let flags = ffi::CGEventGetFlags(event);
+        match event_type {
+            ffi::kCGEventKeyDown => {
+                if ctx.is_held.load(Ordering::Relaxed) {
+                    return event; // key repeat
+                }
+                ctx.is_held.store(true, Ordering::Relaxed);
+
+                let is_double = check_double_tap(&ctx.last_press);
+                if is_double {
+                    eprintln!("[hotkey] DOUBLE-TAP combo (keycode={})", keycode);
+                    let _ = ctx.tx.try_send(HotkeyEvent::ToggleLock);
+                } else {
+                    eprintln!("[hotkey] combo press (keycode={})", keycode);
+                    let _ = ctx.tx.try_send(HotkeyEvent::Start);
+                }
+            }
+            ffi::kCGEventKeyUp => {
+                if !ctx.is_held.load(Ordering::Relaxed) {
+                    return event;
+                }
+                ctx.is_held.store(false, Ordering::Relaxed);
+                if let Ok(mut last) = ctx.last_release.lock() {
+                    *last = Instant::now();
+                }
+                eprintln!("[hotkey] combo release (keycode={})", keycode);
+                let _ = ctx.tx.try_send(HotkeyEvent::Stop);
+            }
+            _ => {}
+        }
+    } else if let Some(mod_key) = hotkey.lone_modifier_keycode {
+        // Lone modifier hotkey (e.g. just AltRight, or Cmd+ShiftRight)
+        if keycode != mod_key {
+            return event;
+        }
+        if !modifiers_match {
+            return event;
+        }
+
+        // Detect press/release via flags
         let flag_active = match keycode {
-            58 | 61 => (flags & 0x00080000) != 0,
-            59 | 62 => (flags & 0x00040000) != 0,
-            56 | 60 => (flags & 0x00020000) != 0,
-            54 | 55 => (flags & 0x00100000) != 0,
+            58 | 61 => (flags & FLAG_ALT) != 0,
+            59 | 62 => (flags & FLAG_CONTROL) != 0,
+            56 | 60 => (flags & FLAG_SHIFT) != 0,
+            54 | 55 => (flags & FLAG_CMD) != 0,
             _ => false,
         };
         let was_held = ctx.is_held.load(Ordering::Relaxed);
-        (flag_active && !was_held, !flag_active && was_held)
-    } else {
-        match event_type {
-            ffi::kCGEventKeyDown => (!ctx.is_held.load(Ordering::Relaxed), false),
-            ffi::kCGEventKeyUp => (false, ctx.is_held.load(Ordering::Relaxed)),
-            _ => (false, false),
-        }
-    };
 
-    if is_press {
-        ctx.is_held.store(true, Ordering::Relaxed);
+        if flag_active && !was_held {
+            ctx.is_held.store(true, Ordering::Relaxed);
 
-        // Check for double-tap
-        let is_double = {
-            if let Ok(mut last) = ctx.last_press.lock() {
-                let now = Instant::now();
-                let elapsed = now.duration_since(*last).as_millis();
-                *last = now;
-                elapsed < DOUBLE_TAP_MS
+            let is_double = check_double_tap(&ctx.last_press);
+            if is_double {
+                eprintln!("[hotkey] DOUBLE-TAP modifier (keycode={})", keycode);
+                let _ = ctx.tx.try_send(HotkeyEvent::ToggleLock);
             } else {
-                false
+                eprintln!("[hotkey] modifier press (keycode={})", keycode);
+                let _ = ctx.tx.try_send(HotkeyEvent::Start);
             }
-        };
-
-        if is_double {
-            eprintln!("[hotkey] DOUBLE-TAP (keycode={})", keycode);
-            let _ = ctx.tx.try_send(HotkeyEvent::ToggleLock);
-        } else {
-            eprintln!("[hotkey] press (keycode={})", keycode);
-            let _ = ctx.tx.try_send(HotkeyEvent::Start);
+        } else if !flag_active && was_held {
+            ctx.is_held.store(false, Ordering::Relaxed);
+            if let Ok(mut last) = ctx.last_release.lock() {
+                *last = Instant::now();
+            }
+            eprintln!("[hotkey] modifier release (keycode={})", keycode);
+            let _ = ctx.tx.try_send(HotkeyEvent::Stop);
         }
-    } else if is_release {
-        ctx.is_held.store(false, Ordering::Relaxed);
-
-        if let Ok(mut last) = ctx.last_release.lock() {
-            *last = Instant::now();
-        }
-
-        eprintln!("[hotkey] release (keycode={})", keycode);
-        let _ = ctx.tx.try_send(HotkeyEvent::Stop);
     }
 
     event
+}
+
+fn check_double_tap(last_press: &Mutex<Instant>) -> bool {
+    if let Ok(mut last) = last_press.lock() {
+        let now = Instant::now();
+        let elapsed = now.duration_since(*last).as_millis();
+        *last = now;
+        elapsed < DOUBLE_TAP_MS
+    } else {
+        false
+    }
 }
 
 unsafe fn run_event_tap(
