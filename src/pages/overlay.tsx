@@ -114,9 +114,7 @@ export function OverlayPage() {
 
 				<span style={{
 					fontSize: '10px', fontWeight: 500, letterSpacing: '-0.01em',
-					fontFamily: message === 'yap' || message === 'yapping' || message === 'yapped'
-						? "'Pixelify Sans Variable', 'Geist Variable', sans-serif"
-						: "'Geist Variable', -apple-system, sans-serif",
+					fontFamily: "'Pixelify Sans Variable', 'Geist Variable', sans-serif",
 					color: isActive ? 'rgba(250,250,250,0.85)' : 'rgba(250,250,250,0.25)',
 					transition: 'color 200ms',
 				}}>
@@ -126,7 +124,7 @@ export function OverlayPage() {
 				{status === 'listening' && elapsed > 0 && (
 					<span style={{
 						fontSize: '9px', fontWeight: 500,
-						fontFamily: "'Geist Variable', -apple-system, sans-serif",
+						fontFamily: "'Pixelify Sans Variable', 'Geist Variable', sans-serif",
 						fontVariantNumeric: 'tabular-nums',
 						color: 'rgba(250,250,250,0.2)',
 					}}>
