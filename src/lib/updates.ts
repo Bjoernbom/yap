@@ -7,7 +7,7 @@ export interface UpdateInfo {
 	url: string
 }
 
-export const CURRENT_VERSION = '0.3.0'
+export const CURRENT_VERSION = '0.3.1'
 
 export async function checkForUpdates(): Promise<UpdateInfo> {
 	try {

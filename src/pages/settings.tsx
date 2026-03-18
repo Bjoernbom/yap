@@ -485,7 +485,7 @@ export function SettingsPage() {
 							<span>no cloud</span>
 						</div>
 						<div className="flex justify-between">
-							<span>v0.3.0</span>
+							<span>v0.3.1</span>
 							{updateInfo?.available && (
 								<button
 									onClick={async () => {
