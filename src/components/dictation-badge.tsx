@@ -14,6 +14,7 @@ export function DictationBadge() {
 			if (state === 'listening') setMessage('yapping...')
 			else if (state === 'locked') setMessage('yapping...')
 			else if (state === 'transcribing') setMessage('cooking...')
+			else if (state === 'polishing') setMessage('polishing...')
 			else if (state === 'complete' && text) {
 				setMessage('yapped')
 				setTimeout(() => setStatus('idle'), 1500)
@@ -47,7 +48,7 @@ export function DictationBadge() {
 						<div className="h-1.5 w-1.5 rounded-full bg-amber" />
 					</div>
 				)}
-				{status === 'transcribing' && (
+				{(status === 'transcribing' || status === 'polishing') && (
 					<div className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-amber" />
 				)}
 				{status === 'complete' && (

@@ -60,6 +60,12 @@ export function App() {
 				await invoke('set_prompt', { prompt })
 			}
 
+			// Load API key for polish feature
+			const apiKey = await getSetting('claude_api_key')
+			if (apiKey) {
+				await invoke('set_api_key', { key: apiKey })
+			}
+
 			setReady(true)
 		}
 		init()
@@ -98,6 +104,11 @@ export function App() {
 		const prompt = getPromptByStyle(style || 'balanced', language || 'en')
 		if (prompt) {
 			await invoke('set_prompt', { prompt })
+		}
+
+		const apiKey = await getSetting('claude_api_key')
+		if (apiKey) {
+			await invoke('set_api_key', { key: apiKey })
 		}
 	}
 

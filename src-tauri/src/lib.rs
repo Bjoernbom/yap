@@ -5,6 +5,7 @@ mod hotkey;
 mod mic_capture;
 mod model;
 mod paste;
+mod refine;
 mod transcribe;
 
 use std::sync::{Arc, Mutex};
@@ -130,6 +131,7 @@ pub fn run() {
             commands::check_accessibility,
             commands::request_accessibility,
             commands::open_accessibility_settings,
+            commands::set_api_key,
             commands::get_autostart,
             commands::set_autostart,
         ])

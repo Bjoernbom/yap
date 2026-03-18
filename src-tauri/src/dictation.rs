@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter};
 use crate::hotkey::{HotkeyEvent, HotkeyListener};
 use crate::mic_capture::MicCaptureState;
 use crate::paste;
+use crate::refine;
 use crate::transcribe::WhisperState;
 
 const MIN_RECORDING_DURATION_MS: u128 = 300;
@@ -32,6 +33,7 @@ pub struct DictationManager {
     mic_device: Arc<Mutex<Option<String>>>,
     language: Arc<Mutex<String>>,
     prompt: Arc<Mutex<String>>,
+    api_key: Arc<Mutex<Option<String>>>,
 }
 
 impl DictationManager {
@@ -42,6 +44,7 @@ impl DictationManager {
             mic_device: Arc::new(Mutex::new(None)),
             language: Arc::new(Mutex::new("en".to_string())),
             prompt: Arc::new(Mutex::new(String::new())),
+            api_key: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -54,6 +57,9 @@ impl DictationManager {
     pub fn set_prompt(&self, new_prompt: String) {
         if let Ok(mut p) = self.prompt.lock() { *p = new_prompt; }
     }
+    pub fn set_api_key(&self, key: Option<String>) {
+        if let Ok(mut k) = self.api_key.lock() { *k = key; }
+    }
 
     pub fn start_listening(&self, hotkey_listener: &HotkeyListener, app: AppHandle) {
         let mic = self.mic.clone();
@@ -61,6 +67,7 @@ impl DictationManager {
         let mic_device = self.mic_device.clone();
         let language = self.language.clone();
         let prompt = self.prompt.clone();
+        let api_key = self.api_key.clone();
         let rx = hotkey_listener.rx.clone();
 
         std::thread::spawn(move || {
@@ -77,26 +84,22 @@ impl DictationManager {
                         eprintln!("[dictation] hold-to-talk START");
                         let samples = record_session(&mic, &mic_device, &app, &rx, &locked, "listening");
                         last_dictation = Instant::now();
-                        process_recording(&app, &whisper, &language, &prompt, samples);
+                        process_recording(&app, &whisper, &language, &prompt, &api_key, samples);
                     }
                     Ok(HotkeyEvent::ToggleLock) => {
                         if locked.load(Ordering::Relaxed) {
-                            // Already locked → turn off (record_session will detect)
                             eprintln!("[dictation] lock OFF (from main loop)");
                             locked.store(false, Ordering::Relaxed);
                         } else {
-                            // Activate lock mode
                             eprintln!("[dictation] lock ON");
                             locked.store(true, Ordering::Relaxed);
                             let samples = record_session(&mic, &mic_device, &app, &rx, &locked, "locked");
                             locked.store(false, Ordering::Relaxed);
                             last_dictation = Instant::now();
-                            process_recording(&app, &whisper, &language, &prompt, samples);
+                            process_recording(&app, &whisper, &language, &prompt, &api_key, samples);
                         }
                     }
-                    Ok(HotkeyEvent::Stop) => {
-                        // Spurious stop — ignore
-                    }
+                    Ok(HotkeyEvent::Stop) => {}
                     Err(_) => {
                         eprintln!("[dictation] channel closed");
                         return;
@@ -135,24 +138,17 @@ fn record_session(
     loop {
         match rx.recv_timeout(std::time::Duration::from_millis(100)) {
             Ok(HotkeyEvent::Stop) => {
-                if !locked.load(Ordering::Relaxed) {
-                    // Hold-to-talk: release stops
-                    break;
-                }
-                // Locked: ignore key release
+                if !locked.load(Ordering::Relaxed) { break; }
             }
             Ok(HotkeyEvent::ToggleLock) => {
                 if locked.load(Ordering::Relaxed) {
-                    // Double-tap while locked → stop
                     eprintln!("[dictation] lock OFF (from record loop)");
                     locked.store(false, Ordering::Relaxed);
                     break;
                 } else {
-                    // Double-tap during hold-to-talk → switch to locked mode
                     eprintln!("[dictation] upgrading hold → locked");
                     locked.store(true, Ordering::Relaxed);
                     emit_state(app, "locked", None, None, None);
-                    // Continue recording — don't break
                 }
             }
             Ok(HotkeyEvent::Start) => {}
@@ -188,6 +184,7 @@ fn process_recording(
     whisper: &Arc<Mutex<WhisperState>>,
     language: &Arc<Mutex<String>>,
     prompt: &Arc<Mutex<String>>,
+    api_key: &Arc<Mutex<Option<String>>>,
     samples: Vec<f32>,
 ) {
     if samples.is_empty() { return; }
@@ -198,7 +195,7 @@ fn process_recording(
     let lang = language.lock().ok().map(|l| l.clone()).unwrap_or_else(|| "en".to_string());
     let lang_opt = if lang.is_empty() { None } else { Some(lang) };
     let prompt_str = prompt.lock().ok().map(|p| p.clone()).unwrap_or_default();
-    let prompt_opt = if prompt_str.is_empty() { None } else { Some(prompt_str) };
+    let prompt_opt = if prompt_str.is_empty() { None } else { Some(prompt_str.clone()) };
 
     let text = {
         let ws = match whisper.lock() {
@@ -212,17 +209,48 @@ fn process_recording(
         }
     };
 
-    match text {
-        Ok(ref t) if !t.trim().is_empty() => {
-            eprintln!("[dictation] transcribed: {}", t.trim());
-            if let Err(e) = paste::paste_text(t.trim()) {
-                emit_state(app, "error", Some(t.trim().to_string()), Some("couldn't paste — check accessibility".to_string()), Some(duration_ms));
-            } else {
-                emit_state(app, "complete", Some(t.trim().to_string()), None, Some(duration_ms));
+    let raw_text = match text {
+        Ok(ref t) if !t.trim().is_empty() => t.trim().to_string(),
+        Ok(_) => { emit_state(app, "complete", None, Some("Nothing detected".to_string()), Some(duration_ms)); return; }
+        Err(e) => { emit_state(app, "error", None, Some(e), Some(duration_ms)); return; }
+    };
+
+    eprintln!("[dictation] transcribed: {}", raw_text);
+
+    // Refine with Claude if API key is set
+    let key = api_key.lock().ok().and_then(|k| k.clone());
+    let final_text = if let Some(ref key) = key {
+        emit_state(app, "polishing", Some(raw_text.clone()), None, Some(duration_ms));
+
+        let key = key.clone();
+        let style = prompt_str;
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build();
+
+        match rt {
+            Ok(rt) => {
+                match rt.block_on(refine::refine_text(&key, &raw_text, &style)) {
+                    Ok(refined) => {
+                        eprintln!("[dictation] refined: {}", refined);
+                        refined
+                    }
+                    Err(e) => {
+                        eprintln!("[dictation] refine failed, using raw: {}", e);
+                        raw_text // fall back to raw on error
+                    }
+                }
             }
+            Err(_) => raw_text,
         }
-        Ok(_) => { emit_state(app, "complete", None, Some("Nothing detected".to_string()), Some(duration_ms)); }
-        Err(e) => { emit_state(app, "error", None, Some(e), Some(duration_ms)); }
+    } else {
+        raw_text
+    };
+
+    if let Err(_e) = paste::paste_text(&final_text) {
+        emit_state(app, "error", Some(final_text), Some("couldn't paste — check accessibility".to_string()), Some(duration_ms));
+    } else {
+        emit_state(app, "complete", Some(final_text), None, Some(duration_ms));
     }
 
     let app_idle = app.clone();

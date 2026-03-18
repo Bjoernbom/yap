@@ -6843,7 +6843,7 @@ dependencies = [
 
 [[package]]
 name = "yap"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "arboard",
  "core-foundation 0.9.4",

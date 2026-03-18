@@ -189,6 +189,8 @@ export function SettingsPage() {
 	const [accessibilityGranted, setAccessibilityGranted] = useState<boolean | null>(null)
 	const [autostart, setAutostart] = useState(false)
 	const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+	const [apiKey, setApiKey] = useState('')
+	const [hasApiKey, setHasApiKey] = useState(false)
 	const [updating, setUpdating] = useState(false)
 
 	async function loadDevices() {
@@ -226,6 +228,13 @@ export function SettingsPage() {
 			setAccessibilityGranted(accessible)
 
 			invoke<boolean>('get_autostart').then(setAutostart).catch(() => {})
+
+			const savedKey = await getSetting('claude_api_key')
+			if (savedKey) {
+				setApiKey(savedKey)
+				setHasApiKey(true)
+				await invoke('set_api_key', { key: savedKey })
+			}
 			checkForUpdates().then(setUpdateInfo).catch(() => {})
 
 			try {
@@ -310,32 +319,73 @@ export function SettingsPage() {
 					<p className="text-[10px] text-muted-foreground/50">hold to talk, release to paste</p>
 				</Row>
 
-				{/* Style */}
-				<Row label="vibe">
-					<div className="flex gap-1">
-						{STYLE_OPTIONS.map((opt) => (
+				{/* Polish — API key */}
+				<Row label="polish" status={hasApiKey ? 'ok' : undefined}>
+					{hasApiKey ? (
+						<div className="flex items-center justify-between">
+							<span className="text-[11px] text-foreground/70">connected</span>
 							<button
-								key={opt.value}
 								onClick={async () => {
-									setStyle(opt.value)
-									await setSetting('dictation_style', opt.value)
-									const prompt = getPromptByStyle(opt.value, whisperLanguage)
-									if (prompt) await invoke('set_prompt', { prompt })
+									setApiKey('')
+									setHasApiKey(false)
+									await deleteSetting('claude_api_key')
+									await invoke('set_api_key', { key: null })
 								}}
-								className={`flex-1 rounded-md px-2 py-1.5 text-center transition-all ${
-									style === opt.value
-										? 'bg-foreground/12 text-[11px] font-medium text-foreground/90'
-										: 'text-[11px] text-muted-foreground/50 hover:bg-white/[0.02] hover:text-muted-foreground/60'
-								}`}
+								className="text-[10px] text-muted-foreground/50 hover:text-destructive/60"
 							>
-								{opt.label}
+								disconnect
 							</button>
-						))}
-					</div>
-					<p className="text-[10px] text-muted-foreground/50">
-						{STYLE_OPTIONS.find((s) => s.value === style)?.hint}
-					</p>
+						</div>
+					) : (
+						<form onSubmit={async (e) => {
+							e.preventDefault()
+							if (!apiKey.startsWith('sk-')) return
+							await setSetting('claude_api_key', apiKey)
+							await invoke('set_api_key', { key: apiKey })
+							setHasApiKey(true)
+						}}>
+							<input
+								type="password"
+								value={apiKey}
+								onChange={(e) => setApiKey(e.target.value)}
+								placeholder="sk-ant-..."
+								className="h-7 w-full rounded-md border border-border/60 bg-white/[0.02] px-2 text-[11px] text-foreground/90 placeholder:text-muted-foreground/30 focus:border-border focus:outline-none"
+							/>
+							<p className="mt-1 text-[10px] text-muted-foreground/50">
+								paste your claude api key — cleans up your speech with ai
+							</p>
+						</form>
+					)}
 				</Row>
+
+				{/* Style — only when polish is enabled */}
+				{hasApiKey && (
+					<Row label="vibe">
+						<div className="flex gap-1">
+							{STYLE_OPTIONS.map((opt) => (
+								<button
+									key={opt.value}
+									onClick={async () => {
+										setStyle(opt.value)
+										await setSetting('dictation_style', opt.value)
+										const prompt = getPromptByStyle(opt.value, whisperLanguage)
+										if (prompt) await invoke('set_prompt', { prompt })
+									}}
+									className={`flex-1 rounded-md px-2 py-1.5 text-center transition-all ${
+										style === opt.value
+											? 'bg-foreground/12 text-[11px] font-medium text-foreground/90'
+											: 'text-[11px] text-muted-foreground/50 hover:bg-white/[0.02] hover:text-muted-foreground/60'
+									}`}
+								>
+									{opt.label}
+								</button>
+							))}
+						</div>
+						<p className="text-[10px] text-muted-foreground/50">
+							{STYLE_OPTIONS.find((s) => s.value === style)?.hint}
+						</p>
+					</Row>
+				)}
 
 				{/* Mic */}
 				<Row label="mic" status={micPermission === 'granted' ? 'ok' : 'warn'}>

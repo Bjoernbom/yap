@@ -295,6 +295,16 @@ pub fn configure_overlay_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn set_api_key(
+    app: tauri::AppHandle,
+    key: Option<String>,
+) -> Result<(), String> {
+    let dictation = app.state::<Arc<DictationManager>>();
+    dictation.set_api_key(key);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_autostart(app: tauri::AppHandle) -> Result<bool, String> {
     use tauri_plugin_autostart::ManagerExt;
     app.autolaunch().is_enabled().map_err(|e| e.to_string())

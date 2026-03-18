@@ -24,6 +24,7 @@ export function OverlayPage() {
 			else if (state === 'listening') { setMessage('yapping'); setElapsed(0) }
 			else if (state === 'locked') { setMessage('yapping'); setElapsed(0) }
 			else if (state === 'transcribing') setMessage('cooking')
+			else if (state === 'polishing') setMessage('polishing')
 			else if (state === 'complete' && text) setMessage('yapped')
 			else if (state === 'error') {
 				const msg = error || 'oops'
@@ -46,7 +47,7 @@ export function OverlayPage() {
 		return () => { if (timerRef.current) clearInterval(timerRef.current) }
 	}, [status])
 
-	const isActive = status === 'listening' || status === 'locked' || status === 'transcribing'
+	const isActive = status === 'listening' || status === 'locked' || status === 'transcribing' || status === 'polishing'
 
 	async function openDashboard() {
 		const main = await WebviewWindow.getByLabel('main')
@@ -107,7 +108,7 @@ export function OverlayPage() {
 									<div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
 								</>
 							)}
-							{status === 'transcribing' && (
+							{(status === 'transcribing' || status === 'polishing') && (
 								<div style={{
 									width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b',
 									animation: 'pulse 0.7s ease-in-out infinite',

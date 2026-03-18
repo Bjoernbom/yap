@@ -1,4 +1,4 @@
-export type DictationStatus = 'idle' | 'listening' | 'locked' | 'transcribing' | 'complete' | 'error'
+export type DictationStatus = 'idle' | 'listening' | 'locked' | 'transcribing' | 'polishing' | 'complete' | 'error'
 
 export interface DictationEvent {
 	state: DictationStatus
