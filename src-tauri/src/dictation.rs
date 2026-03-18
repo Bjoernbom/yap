@@ -224,13 +224,14 @@ fn process_recording(
 
         let key = key.clone();
         let style = prompt_str;
+        let lang_code = lang_opt.as_deref().unwrap_or("en").to_string();
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build();
 
         match rt {
             Ok(rt) => {
-                match rt.block_on(refine::refine_text(&key, &raw_text, &style)) {
+                match rt.block_on(refine::refine_text(&key, &raw_text, &style, &lang_code)) {
                     Ok(refined) => {
                         eprintln!("[dictation] refined: {}", refined);
                         refined

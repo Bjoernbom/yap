@@ -27,7 +27,18 @@ struct ApiResponse {
     content: Vec<ContentBlock>,
 }
 
-pub async fn refine_text(api_key: &str, raw_text: &str, style_prompt: &str) -> Result<String, String> {
+pub async fn refine_text(api_key: &str, raw_text: &str, style_prompt: &str, language: &str) -> Result<String, String> {
+    let lang_hint = match language {
+        "sv" => "The user is speaking Swedish. Output MUST be in Swedish.",
+        "en" => "The user is speaking English. Output MUST be in English.",
+        "de" => "The user is speaking German. Output MUST be in German.",
+        "fr" => "The user is speaking French. Output MUST be in French.",
+        "es" => "The user is speaking Spanish. Output MUST be in Spanish.",
+        "no" => "The user is speaking Norwegian. Output MUST be in Norwegian.",
+        "da" => "The user is speaking Danish. Output MUST be in Danish.",
+        "ja" => "The user is speaking Japanese. Output MUST be in Japanese.",
+        _ => "Keep the same language as the input.",
+    };
     let system = format!(
         "You clean up speech-to-text transcriptions. The text was spoken by a human and transcribed by Whisper.\n\n\
         What to fix:\n\
@@ -40,10 +51,12 @@ pub async fn refine_text(api_key: &str, raw_text: &str, style_prompt: &str) -> R
         - Do NOT rephrase, restructure, or rewrite sentences\n\
         - Do NOT add words that weren't spoken\n\
         - Do NOT correct grammar unless it's clearly a transcription error (not how they talk)\n\
-        - Do NOT translate or change language\n\
+        - Do NOT translate or change language — if the input is Swedish, output Swedish. If English, output English. NEVER switch languages\n\
         - Do NOT change technical terms, names, or jargon\n\n\
+        CRITICAL: {}\n\n\
         {}\n\n\
         Output ONLY the cleaned text. No explanations, no quotes, no prefixes.",
+        lang_hint,
         if style_prompt.is_empty() { "" } else { style_prompt }
     );
 
