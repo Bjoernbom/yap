@@ -7,6 +7,7 @@ import { Layout } from './components/layout'
 import { HomePage } from './pages/home'
 import { SettingsPage } from './pages/settings'
 import { OverlayPage } from './pages/overlay'
+import { OnboardingPage } from './pages/onboarding'
 import { initDb } from './lib/db'
 import { initTray } from './lib/tray'
 import { getSetting } from './lib/settings'
@@ -16,6 +17,7 @@ import type { DictationEvent } from './types/dictation'
 
 export function App() {
 	const [ready, setReady] = useState(false)
+	const [needsOnboarding, setNeedsOnboarding] = useState(false)
 	const loadDictations = useDictationStore((s) => s.loadDictations)
 	const addDictation = useDictationStore((s) => s.addDictation)
 	const isOverlay = getCurrentWindow().label === 'overlay'
@@ -31,6 +33,14 @@ export function App() {
 
 		async function init() {
 			await initDb()
+
+			const onboardingComplete = await getSetting('onboarding_complete')
+			if (!onboardingComplete) {
+				setNeedsOnboarding(true)
+				setReady(true)
+				return
+			}
+
 			await loadDictations()
 			await initTray()
 
@@ -70,12 +80,31 @@ export function App() {
 		}
 	}, [addDictation, isOverlay])
 
+	async function completeOnboarding() {
+		setNeedsOnboarding(false)
+		await loadDictations()
+		await initTray()
+
+		const [style, language] = await Promise.all([
+			getSetting('dictation_style'),
+			getSetting('whisper_language'),
+		])
+		const prompt = getPromptByStyle(style || 'balanced', language || 'en')
+		if (prompt) {
+			await invoke('set_prompt', { prompt })
+		}
+	}
+
 	if (!ready) {
 		return (
 			<div className="flex h-full items-center justify-center text-muted-foreground">
 				Loading...
 			</div>
 		)
+	}
+
+	if (needsOnboarding) {
+		return <OnboardingPage onComplete={completeOnboarding} />
 	}
 
 	return (

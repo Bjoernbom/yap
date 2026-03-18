@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { open } from '@tauri-apps/plugin-shell'
 import { getSetting, setSetting, deleteSetting } from '@/lib/settings'
 import { STYLE_OPTIONS, getPromptByStyle } from '@/lib/dictation-styles'
 import { HOTKEY_OPTIONS } from '@/lib/hotkeys'
+import { checkForUpdates, type UpdateInfo } from '@/lib/updates'
 import { Loader2, Check, ChevronDown, ExternalLink } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 
@@ -42,11 +44,11 @@ function Row({ label, children, status }: {
 	return (
 		<div className="space-y-2 border-b border-border/30 px-3.5 py-3">
 			<div className="flex items-center gap-2">
-				<span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
+				<span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">
 					{label}
 				</span>
 				{status === 'ok' && (
-					<span className="flex items-center gap-0.5 text-[9px] font-medium text-success/70">
+					<span className="flex items-center gap-0.5 text-[9px] font-medium text-success/80">
 						<Check size={8} /> ok
 					</span>
 				)}
@@ -74,7 +76,7 @@ function Select({ value, onChange, children }: {
 			<select
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
-				className="h-7 w-full appearance-none rounded-md border border-border/50 bg-white/[0.02] px-2 pr-6 text-[11px] text-foreground/80 transition-colors focus:border-border focus:outline-none"
+				className="h-7 w-full appearance-none rounded-md border border-border/60 bg-white/[0.02] px-2 pr-6 text-[11px] text-foreground/90 transition-colors focus:border-border focus:outline-none"
 			>
 				{children}
 			</select>
@@ -97,6 +99,7 @@ export function SettingsPage() {
 	const [style, setStyle] = useState('balanced')
 	const [accessibilityGranted, setAccessibilityGranted] = useState<boolean | null>(null)
 	const [autostart, setAutostart] = useState(false)
+	const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
 
 	async function loadDevices() {
 		const devices = await navigator.mediaDevices.enumerateDevices()
@@ -133,6 +136,7 @@ export function SettingsPage() {
 			setAccessibilityGranted(accessible)
 
 			invoke<boolean>('get_autostart').then(setAutostart).catch(() => {})
+			checkForUpdates().then(setUpdateInfo).catch(() => {})
 
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -174,8 +178,8 @@ export function SettingsPage() {
 				{accessibilityGranted === false && (
 					<div className="flex items-center justify-between border-b border-destructive/20 bg-destructive/[0.04] px-3.5 py-2.5">
 						<div>
-							<p className="text-[11px] font-medium text-destructive/80">accessibility needed</p>
-							<p className="text-[10px] text-muted-foreground/50">for hotkey + paste to work</p>
+							<p className="text-[11px] font-medium text-destructive">accessibility needed</p>
+							<p className="text-[10px] text-muted-foreground/60">for hotkey + paste to work</p>
 						</div>
 						<div className="flex items-center gap-1">
 							<button
@@ -189,7 +193,7 @@ export function SettingsPage() {
 									}, 1000)
 									setTimeout(() => clearInterval(poll), 60000)
 								}}
-								className="rounded-md bg-foreground/10 px-2.5 py-1 text-[10px] font-medium text-foreground/70 transition-colors hover:bg-foreground/15"
+								className="rounded-md bg-foreground/12 px-2.5 py-1 text-[10px] font-medium text-foreground/80 transition-colors hover:bg-foreground/15"
 							>
 								grant
 							</button>
@@ -214,7 +218,7 @@ export function SettingsPage() {
 							<option key={o.value} value={o.value}>{o.label}</option>
 						))}
 					</Select>
-					<p className="text-[10px] text-muted-foreground/40">hold to talk, release to paste</p>
+					<p className="text-[10px] text-muted-foreground/50">hold to talk, release to paste</p>
 				</Row>
 
 				{/* Style */}
@@ -231,15 +235,15 @@ export function SettingsPage() {
 								}}
 								className={`flex-1 rounded-md px-2 py-1.5 text-center transition-all ${
 									style === opt.value
-										? 'bg-foreground/10 text-[11px] font-medium text-foreground/80'
-										: 'text-[11px] text-muted-foreground/40 hover:bg-white/[0.02] hover:text-muted-foreground/60'
+										? 'bg-foreground/12 text-[11px] font-medium text-foreground/90'
+										: 'text-[11px] text-muted-foreground/50 hover:bg-white/[0.02] hover:text-muted-foreground/60'
 								}`}
 							>
 								{opt.label}
 							</button>
 						))}
 					</div>
-					<p className="text-[10px] text-muted-foreground/40">
+					<p className="text-[10px] text-muted-foreground/50">
 						{STYLE_OPTIONS.find((s) => s.value === style)?.hint}
 					</p>
 				</Row>
@@ -256,7 +260,7 @@ export function SettingsPage() {
 									await loadDevices()
 								} catch { setMicPermission('denied') }
 							}}
-							className="rounded-md bg-foreground/10 px-2.5 py-1 text-[10px] font-medium text-foreground/70 transition-colors hover:bg-foreground/15"
+							className="rounded-md bg-foreground/12 px-2.5 py-1 text-[10px] font-medium text-foreground/80 transition-colors hover:bg-foreground/15"
 						>
 							connect microphone
 						</button>
@@ -288,8 +292,8 @@ export function SettingsPage() {
 								}}
 								className={`flex-1 rounded-md px-1.5 py-1.5 text-center transition-all ${
 									whisperModel === opt.value
-										? 'bg-foreground/10 text-[10px] font-medium text-foreground/80'
-										: 'text-[10px] text-muted-foreground/40 hover:bg-white/[0.02] hover:text-muted-foreground/60'
+										? 'bg-foreground/12 text-[10px] font-medium text-foreground/90'
+										: 'text-[10px] text-muted-foreground/50 hover:bg-white/[0.02] hover:text-muted-foreground/60'
 								}`}
 							>
 								<span>{opt.label}</span>
@@ -314,7 +318,7 @@ export function SettingsPage() {
 									setDownloading(false)
 								}
 							}}
-							className="mt-1 w-full rounded-md bg-foreground/10 py-1.5 text-[10px] font-medium text-foreground/70 transition-colors hover:bg-foreground/15"
+							className="mt-1 w-full rounded-md bg-foreground/12 py-1.5 text-[10px] font-medium text-foreground/80 transition-colors hover:bg-foreground/15"
 						>
 							download {MODEL_OPTIONS.find((m) => m.value === whisperModel)?.label?.toLowerCase()} ({MODEL_OPTIONS.find((m) => m.value === whisperModel)?.size})
 						</button>
@@ -347,7 +351,6 @@ export function SettingsPage() {
 						if (v) await setSetting('whisper_language', v)
 						else await deleteSetting('whisper_language')
 						await invoke('set_language', { language: v })
-						// Update prompt for new language
 						const prompt = getPromptByStyle(style, v || 'en')
 						if (prompt) await invoke('set_prompt', { prompt })
 					}}>
@@ -367,8 +370,8 @@ export function SettingsPage() {
 						}}
 						className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-all ${
 							autostart
-								? 'bg-foreground/10 text-foreground/80'
-								: 'text-muted-foreground/40 hover:bg-white/[0.02] hover:text-muted-foreground/60'
+								? 'bg-foreground/12 text-foreground/90'
+								: 'text-muted-foreground/50 hover:bg-white/[0.02] hover:text-muted-foreground/60'
 						}`}
 					>
 						{autostart ? 'launches on login' : 'manual'}
@@ -377,10 +380,10 @@ export function SettingsPage() {
 
 				{/* Footer info */}
 				<div className="px-3.5 py-3">
-					<div className="space-y-1.5 text-[10px] text-muted-foreground/30">
+					<div className="space-y-1.5 text-[10px] text-muted-foreground/40">
 						<div className="flex justify-between">
 							<span>accessibility</span>
-							<span className={accessibilityGranted ? 'text-success/50' : 'text-destructive/50'}>
+							<span className={accessibilityGranted ? 'text-success/60' : 'text-destructive/60'}>
 								{accessibilityGranted === null ? '...' : accessibilityGranted ? 'granted' : 'missing'}
 							</span>
 						</div>
@@ -391,6 +394,17 @@ export function SettingsPage() {
 						<div className="flex justify-between">
 							<span>everything runs locally</span>
 							<span>no cloud</span>
+						</div>
+						<div className="flex justify-between">
+							<span>v0.2.0</span>
+							{updateInfo?.available && (
+								<button
+									onClick={() => open(updateInfo.url)}
+									className="text-foreground/50 transition-colors hover:text-foreground/70"
+								>
+									v{updateInfo.version} available
+								</button>
+							)}
 						</div>
 					</div>
 				</div>
