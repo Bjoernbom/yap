@@ -531,9 +531,15 @@ export function SettingsPage() {
 							<span>text only</span>
 						</div>
 						<div className="flex justify-between">
-							<span>everything runs locally</span>
-							<span>no cloud</span>
+							<span>transcription</span>
+							<span>local</span>
 						</div>
+						{hasApiKey && (
+							<div className="flex justify-between">
+								<span>polish</span>
+								<span>anthropic api</span>
+							</div>
+						)}
 						<div className="flex justify-between">
 							<span>v0.4.0</span>
 							{updateInfo?.available && (
