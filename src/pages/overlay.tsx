@@ -64,12 +64,14 @@ export function OverlayPage() {
 				width: '100%',
 				height: '100%',
 				display: 'flex',
-				alignItems: 'center',
+				alignItems: 'flex-end',
 				justifyContent: 'center',
+				paddingBottom: '6px',
 				cursor: 'grab',
 				userSelect: 'none',
 				overflow: 'hidden',
-				background: '#09090b',
+				background: '#000000',
+				borderRadius: '0 0 12px 12px',
 				transition: 'background 200ms',
 			}}
 		>

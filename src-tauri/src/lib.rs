@@ -35,7 +35,7 @@ pub fn run() {
                 tauri::WebviewUrl::App("/overlay".into()),
             )
             .title("")
-            .inner_size(150.0, 28.0)
+            .inner_size(160.0, 38.0)
             .decorations(false)
             .always_on_top(true)
             .focused(false)
@@ -56,9 +56,9 @@ pub fn run() {
                 if let Ok(Some(monitor)) = overlay.primary_monitor() {
                     let scale = monitor.scale_factor();
                     let screen_w = monitor.size().width as f64 / scale;
-                    let x = (screen_w - 150.0) / 2.0;
-                    // macOS menu bar is ~25pt, place just below it
-                    let _ = overlay.set_position(tauri::LogicalPosition::new(x, 38.0));
+                    let x = (screen_w - 160.0) / 2.0;
+                    // Flush with top — extends from notch
+                    let _ = overlay.set_position(tauri::LogicalPosition::new(x, 0.0));
                     eprintln!("[overlay] positioned at ({}, 38), screen_w={}", x, screen_w);
                 } else {
                     eprintln!("[overlay] no primary monitor found, centering");
