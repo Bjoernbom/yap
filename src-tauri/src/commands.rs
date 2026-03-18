@@ -167,6 +167,27 @@ pub fn configure_overlay_window(app: tauri::AppHandle) -> Result<(), String> {
                         std::mem::transmute(objc_msgSend as *const ());
                     f(win, sel, current_mask | 128); // NSNonactivatingPanelMask
 
+                    // setOpaque: NO — allow transparency
+                    let sel = sel_registerName(b"setOpaque:\0".as_ptr());
+                    let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, i8) =
+                        std::mem::transmute(objc_msgSend as *const ());
+                    f(win, sel, 0);
+
+                    // setBackgroundColor: [NSColor clearColor]
+                    let ns_color_class = objc_getClass(b"NSColor\0".as_ptr());
+                    if !ns_color_class.is_null() {
+                        let sel = sel_registerName(b"clearColor\0".as_ptr());
+                        let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void) -> *mut std::ffi::c_void =
+                            std::mem::transmute(objc_msgSend as *const ());
+                        let clear_color = f(ns_color_class, sel);
+
+                        let sel = sel_registerName(b"setBackgroundColor:\0".as_ptr());
+                        let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void, *mut std::ffi::c_void) =
+                            std::mem::transmute(objc_msgSend as *const ());
+                        f(win, sel, clear_color);
+                        eprintln!("[overlay] set transparent background");
+                    }
+
                     // Verify
                     let sel = sel_registerName(b"level\0".as_ptr());
                     let f: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_void) -> i64 =

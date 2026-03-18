@@ -64,17 +64,23 @@ export function OverlayPage() {
 				width: '100%',
 				height: '100%',
 				display: 'flex',
-				alignItems: 'flex-end',
+				alignItems: 'stretch',
 				justifyContent: 'center',
-				paddingBottom: '6px',
 				cursor: 'grab',
 				userSelect: 'none',
 				overflow: 'hidden',
-				background: '#000000',
-				borderRadius: '0 0 12px 12px',
-				transition: 'background 200ms',
+				background: 'transparent',
 			}}
 		>
+			<div style={{
+				flex: 1,
+				display: 'flex',
+				alignItems: 'flex-end',
+				justifyContent: 'center',
+				paddingBottom: '7px',
+				background: '#000000',
+				borderRadius: '0 0 12px 12px',
+			}}>
 			<div style={{ display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
 				<div style={{ position: 'relative', width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 					{status === 'listening' && (
@@ -139,6 +145,7 @@ export function OverlayPage() {
 				@keyframes ping { 75%, 100% { transform: scale(2.5); opacity: 0; } }
 				@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 			`}</style>
+		</div>
 		</div>
 	)
 }
