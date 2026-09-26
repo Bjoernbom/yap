@@ -2,6 +2,11 @@
 /// each chunk goes to the engine as soon as it's cut, so key-up only waits for
 /// the tail (35–55 ms for a 2-minute dictation in the spike).
 ///
+/// A cut that has to fall inside speech (a long chunk with only short pauses)
+/// overlaps its neighbours and keeps each word from the side that heard it
+/// with context, because Parakeet drops words at a chunk edge that runs into
+/// speech. See `ChunkPolicy`.
+///
 /// Two stages run behind `append`, which only hands audio over and returns:
 /// the segmenter scores 256 ms hops and cuts chunks, and the transcriber runs
 /// them through the engine one at a time (chunks are 20–100× faster than real
@@ -13,6 +18,8 @@ public actor StreamingTranscriber: StreamingTranscription {
 		/// Seconds of real audio, before padding.
 		public var duration: Double
 		public var reason: ChunkCut
+		/// Where the chunk begins, in seconds since `begin`.
+		public var start: Double
 		/// Wall time of the engine call.
 		public var latency: Duration
 		public var text: String
@@ -82,6 +89,13 @@ public actor StreamingTranscriber: StreamingTranscription {
 		finished = nil
 	}
 
+	/// What the segmenter hands the transcriber.
+	private enum Work: Sendable {
+		case chunk(SpeechChunk)
+		/// Nothing was cut for a while; keep the Neural Engine awake.
+		case keepWarm
+	}
+
 	private static func run(
 		input: AsyncStream<[Float]>,
 		engine: any SpeechEngine,
@@ -89,10 +103,10 @@ public actor StreamingTranscriber: StreamingTranscription {
 		policy: ChunkPolicy,
 		onChunk: (@Sendable (ChunkReport) -> Void)?
 	) async throws -> String {
-		let (chunks, chunkSink) = AsyncStream<SpeechChunk>.makeStream()
-		async let texts = transcribe(chunks, engine: engine, onChunk: onChunk)
-		await segment(input, vad: vad, policy: policy, into: chunkSink)
-		let joined = TranscriptJoiner.join(try await texts)
+		let (work, workSink) = AsyncStream<Work>.makeStream()
+		async let text = transcribe(work, engine: engine, policy: policy, onChunk: onChunk)
+		await segment(input, vad: vad, policy: policy, into: workSink)
+		let joined = try await text
 		try Task.checkCancellation()
 		return joined
 	}
@@ -102,20 +116,30 @@ public actor StreamingTranscriber: StreamingTranscription {
 		_ input: AsyncStream<[Float]>,
 		vad: any VoiceActivityDetector,
 		policy: ChunkPolicy,
-		into sink: AsyncStream<SpeechChunk>.Continuation
+		into sink: AsyncStream<Work>.Continuation
 	) async {
 		defer { sink.finish() }
 		let stream = await vad.makeStream()
 		var chunker = Chunker(policy: policy)
 		var buffer: [Float] = []
 		var offset = 0
+		// Audio time stands in for wall time: a live mic delivers it at 1×.
+		let keepWarmSamples = policy.keepWarmInterval.map { policy.samples($0) }
+		var sinceWork = 0
 		for await samples in input {
 			buffer += samples
 			while buffer.count - offset >= policy.hopSamples {
 				let hop = Array(buffer[offset..<(offset + policy.hopSamples)])
 				offset += policy.hopSamples
+				sinceWork += hop.count
 				let probability = await score(hop, with: stream)
-				if let chunk = chunker.push(hop, probability: probability) { sink.yield(chunk) }
+				if let chunk = chunker.push(hop, probability: probability) {
+					sink.yield(.chunk(chunk))
+					sinceWork = 0
+				} else if let keepWarmSamples, sinceWork >= keepWarmSamples {
+					sink.yield(.keepWarm)
+					sinceWork = 0
+				}
 			}
 			// Drop consumed samples now and then, not on every hop.
 			if offset >= 16 * policy.hopSamples {
@@ -131,37 +155,51 @@ public actor StreamingTranscriber: StreamingTranscription {
 			let hop = remainder + [Float](repeating: 0, count: policy.hopSamples - remainder.count)
 			probability = await score(hop, with: stream)
 		}
-		if let tail = chunker.finish(remainder: remainder, probability: probability) { sink.yield(tail) }
+		if let tail = chunker.finish(remainder: remainder, probability: probability) { sink.yield(.chunk(tail)) }
 	}
 
 	/// A VAD failure must not lose audio: treat the hop as speech, which only
-	/// means no cut here (the 14 s ceiling still applies).
+	/// means no cut here (the ceiling still applies).
 	private static func score(_ hop: [Float], with stream: any VoiceActivityStream) async -> Float {
 		(try? await stream.speechProbability(of: hop)) ?? 1
 	}
 
 	/// Stage 2: run chunks through the engine, strictly one at a time.
 	private static func transcribe(
-		_ chunks: AsyncStream<SpeechChunk>,
+		_ work: AsyncStream<Work>,
 		engine: any SpeechEngine,
+		policy: ChunkPolicy,
 		onChunk: (@Sendable (ChunkReport) -> Void)?
-	) async throws -> [String] {
-		var texts: [String] = []
+	) async throws -> String {
+		var stitcher = TranscriptStitcher()
 		var index = 0
 		let clock = ContinuousClock()
-		for await chunk in chunks {
+		var lastCall: ContinuousClock.Instant?
+		for await item in work {
 			try Task.checkCancellation()
-			let start = clock.now
-			let transcript = try await engine.transcribe(chunk.samples)
-			try Task.checkCancellation()
-			texts.append(transcript.text)
-			onChunk?(ChunkReport(
-				index: index, duration: chunk.duration,
-				reason: chunk.reason,
-				latency: clock.now - start, text: transcript.text))
-			index += 1
+			switch item {
+			case .keepWarm:
+				// Skip it when a chunk just ran (or the queue is behind): the
+				// engine is awake, and a warm-up in flight at key-up would only
+				// delay the tail.
+				let interval = Duration.seconds(policy.keepWarmInterval ?? 0)
+				if let lastCall, clock.now - lastCall < interval / 2 { continue }
+				await engine.warmUp()
+				lastCall = clock.now
+			case .chunk(let chunk):
+				let start = clock.now
+				let transcript = try await engine.transcribe(chunk.samples)
+				lastCall = clock.now
+				try Task.checkCancellation()
+				let text = stitcher.add(transcript, start: chunk.start, keep: chunk.keep)
+				onChunk?(ChunkReport(
+					index: index, duration: chunk.duration,
+					reason: chunk.reason, start: chunk.start,
+					latency: clock.now - start, text: text))
+				index += 1
+			}
 		}
 		try Task.checkCancellation()
-		return texts
+		return stitcher.finish()
 	}
 }

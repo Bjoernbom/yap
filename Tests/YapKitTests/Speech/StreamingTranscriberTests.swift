@@ -7,6 +7,7 @@ private actor ChunkEngine: SpeechEngine {
 	private(set) var receivedSampleCounts: [Int] = []
 	private(set) var started = 0
 	private(set) var maxConcurrent = 0
+	private(set) var warmUps = 0
 	private var running = 0
 	private var gated: Bool
 	private var waiters: [CheckedContinuation<Void, Never>] = []
@@ -18,7 +19,7 @@ private actor ChunkEngine: SpeechEngine {
 	}
 
 	func prepare(progress: @escaping @Sendable (ModelProgress) -> Void) async throws {}
-	func warmUp() async {}
+	func warmUp() async { warmUps += 1 }
 	func unload() async {}
 
 	func transcribe(_ samples: [Float]) async throws -> Transcript {
@@ -190,6 +191,49 @@ struct StreamingTranscriberTests {
 		await feed(transcriber, hops: 3)
 		await #expect(throws: SpeechError.modelNotPrepared) { try await transcriber.finish() }
 	}
+
+	@Test func noWordIsLostOrRepeatedAtCutsInsideSpeech() async throws {
+		// 30 s of speech with no pause Silero would call speech end, a few
+		// short dips, and an engine that loses the words near any chunk edge
+		// that runs into speech, like Parakeet does.
+		let wordSamples = 4000
+		let words = 120
+		var audio = [Float](repeating: 0, count: 16_000)
+		audio += (0..<(words * wordSamples)).map { Float($0 / wordSamples + 1) }
+		audio += [Float](repeating: 0, count: 16_000)
+		var script = [Float](repeating: s, count: audio.count / hop)
+		for dip in [40, 70, 100] { script[dip] = 0.3 }
+		let engine = EdgeDroppingEngine(wordSamples: wordSamples)
+		let transcriber = StreamingTranscriber(engine: engine, vad: ScriptedVAD(script: script))
+		await transcriber.begin()
+		var offset = 0
+		while offset < audio.count {
+			let end = min(offset + 1600, audio.count)
+			await transcriber.append(AudioChunk(samples: Array(audio[offset..<end]), hostTime: 0))
+			offset = end
+		}
+		let text = try await transcriber.finish()
+		#expect(text == (1...words).map { "w\($0)" }.joined(separator: " "))
+		#expect(await engine.calls > 3)
+	}
+
+	@Test func keepsTheEngineWarmWhileNothingIsCut() async throws {
+		let engine = ChunkEngine()
+		let transcriber = StreamingTranscriber(engine: engine, vad: ScriptedVAD(script: [Float](repeating: s, count: 12)))
+		await transcriber.begin()
+		await feed(transcriber, hops: 12)
+		_ = try await transcriber.finish()
+		#expect(await engine.warmUps >= 1)
+
+		var policy = ChunkPolicy.dictation
+		policy.keepWarmInterval = nil
+		let idle = ChunkEngine()
+		let cold = StreamingTranscriber(engine: idle, vad: ScriptedVAD(script: [Float](repeating: s, count: 12)), policy: policy)
+		await cold.begin()
+		await feed(cold, hops: 12)
+		_ = try await cold.finish()
+		#expect(await idle.warmUps == 0)
+	}
 }
 
 private actor BrokenChunkEngine: SpeechEngine {
@@ -197,4 +241,40 @@ private actor BrokenChunkEngine: SpeechEngine {
 	func warmUp() async {}
 	func unload() async {}
 	func transcribe(_ samples: [Float]) async throws -> Transcript { throw SpeechError.modelNotPrepared }
+}
+
+/// Hears "w<n>" wherever the samples hold the value n (0 is silence), with
+/// timings, and drops the words within 0.6 s of an edge that cuts into speech.
+private actor EdgeDroppingEngine: SpeechEngine {
+	let wordSamples: Int
+	private(set) var calls = 0
+
+	init(wordSamples: Int) {
+		self.wordSamples = wordSamples
+	}
+
+	func prepare(progress: @escaping @Sendable (ModelProgress) -> Void) async throws {}
+	func warmUp() async {}
+	func unload() async {}
+
+	func transcribe(_ samples: [Float]) async throws -> Transcript {
+		calls += 1
+		let rate = AudioChunk.sampleRate
+		let duration = Double(samples.count) / rate
+		var words: [TimedWord] = []
+		var index = 0
+		while index < samples.count {
+			let value = samples[index]
+			var end = index
+			while end < samples.count && samples[end] == value { end += 1 }
+			if value > 0 {
+				words.append(TimedWord(text: "w\(Int(value))", start: Double(index) / rate, end: Double(end) / rate))
+			}
+			index = end
+		}
+		let edge = 0.6
+		if samples.first ?? 0 > 0 { words.removeAll { $0.start < edge } }
+		if samples.last ?? 0 > 0 { words.removeAll { $0.end > duration - edge } }
+		return Transcript(text: words.map(\.text).joined(separator: " "), confidence: 1, words: words)
+	}
 }

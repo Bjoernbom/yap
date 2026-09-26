@@ -2,10 +2,27 @@
 public struct Transcript: Sendable, Equatable {
 	public var text: String
 	public var confidence: Float
+	/// The words of `text` with where they were heard, when the engine knows.
+	/// Streaming needs them to stitch chunks that overlap.
+	public var words: [TimedWord]
 
-	public init(text: String, confidence: Float) {
+	public init(text: String, confidence: Float, words: [TimedWord] = []) {
 		self.text = text
 		self.confidence = confidence
+		self.words = words
+	}
+}
+
+/// One word and when it was spoken, in seconds from the start of the chunk.
+public struct TimedWord: Sendable, Equatable {
+	public var text: String
+	public var start: Double
+	public var end: Double
+
+	public init(text: String, start: Double, end: Double) {
+		self.text = text
+		self.start = start
+		self.end = end
 	}
 }
 

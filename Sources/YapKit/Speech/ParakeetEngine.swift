@@ -102,9 +102,12 @@ public actor ParakeetEngine: SpeechEngine {
 			throw error
 		}
 		await endCall()
+		let words = buildWordTimings(from: result.tokenTimings ?? []).map {
+			TimedWord(text: $0.word, start: $0.startTime, end: $0.endTime)
+		}
 		return Transcript(
 			text: result.text.trimmingCharacters(in: .whitespacesAndNewlines),
-			confidence: result.confidence)
+			confidence: result.confidence, words: words)
 	}
 
 	/// Frees the Neural Engine memory. Waits for running transcriptions to
