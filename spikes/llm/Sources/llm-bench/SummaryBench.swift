@@ -64,7 +64,7 @@ enum SummaryBench {
 			for size in sizes {
 				let sections = TranscriptSplitter.split(lines, maxCharacters: size)
 				let minutes = sections.map { minutesBetween($0.start, $0.end) }
-				let sectionWords = sections.map { $0.text.split(separator: " ").count }
+				let sectionWords = sections.map(\.words)
 				print(String(format: "  section-chars %d: %d sections, avg %d words, avg %.1f min", size, sections.count, sectionWords.reduce(0, +) / max(sections.count, 1), minutes.reduce(0, +) / Double(max(minutes.count, 1))))
 				if dryRun { continue }
 

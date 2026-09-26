@@ -46,6 +46,8 @@ struct TranscriptSection: Sendable {
 	var start: String
 	var end: String
 	var text: String
+	/// Spoken words only, without speaker labels.
+	var words: Int
 }
 
 enum TranscriptSplitter {
@@ -72,7 +74,8 @@ enum TranscriptSplitter {
 			guard let first = current.first, let last = current.last else { return }
 			sections.append(TranscriptSection(
 				index: sections.count + 1, start: first.time, end: last.time,
-				text: current.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+				text: current.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n"),
+				words: current.reduce(0) { $0 + $1.text.split(separator: " ").count }
 			))
 			current = []
 			size = 0
