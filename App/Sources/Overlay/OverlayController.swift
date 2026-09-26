@@ -6,7 +6,7 @@ import SwiftUI
 /// so the dictation engine can drive it without knowing about AppKit.
 @MainActor
 final class OverlayController {
-	private static let grow = Animation.spring(duration: 0.22, bounce: 0.22)
+	private static let grow = Animation.spring(duration: 0.26, bounce: 0.12)
 	private static let shrink = Animation.spring(duration: 0.2, bounce: 0)
 	/// How long the tick stays before the notch closes.
 	private static let doneHold: Duration = .milliseconds(850)

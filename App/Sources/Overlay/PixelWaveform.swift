@@ -15,7 +15,7 @@ struct PixelWaveform: View {
 	let phase: Phase
 
 	static let bars = AudioLevels.count * 2 - 1
-	static let rows = 9
+	static let rows = 7
 	/// Bars are one pixel wide with a one-pixel gap, so they read as bars.
 	static let barPitch: CGFloat = 6
 	private static let foldDuration: TimeInterval = 0.16
