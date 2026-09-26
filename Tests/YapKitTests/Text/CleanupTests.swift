@@ -70,6 +70,9 @@ struct CleanupTests {
 
 	@Test(arguments: [
 		("Vi har grannar..", "Vi har grannar."),
+		("The deploy failed again.. can you check the logs?", "The deploy failed again. Can you check the logs?"),
+		("Vi ses.. öppna appen sen.", "Vi ses. Öppna appen sen."),
+		("Det står t.ex. att vi ska vänta.", "Det står t.ex. att vi ska vänta."),
 		("Hej  där ,  hur mår du ?", "Hej där, hur mår du?"),
 		("Okej,, vi kör.", "Okej, vi kör."),
 		("Vänta... okej.", "Vänta... okej."),
@@ -85,6 +88,8 @@ struct CleanupTests {
 		#expect(Cleanup.apply("Um, fetchUserProfile returns nil.", style: .dev) == "fetchUserProfile returns nil.")
 		#expect(Cleanup.apply("Uh, rename user_id to account_id", style: .dev) == "rename user_id to account_id")
 		#expect(Cleanup.apply("Um, fetchUserProfile returns nil.") == "fetchUserProfile returns nil.")
+		#expect(Cleanup.apply("It broke.. fetchUser returns nil") == "It broke. fetchUser returns nil")
+		#expect(Cleanup.apply("It broke.. run the tests", style: .dev) == "It broke. run the tests")
 	}
 
 	@Test(arguments: [
