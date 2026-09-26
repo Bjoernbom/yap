@@ -28,6 +28,21 @@ struct MenuContent: View {
 		}
 		.keyboardShortcut(",")
 
+		#if DEBUG
+		Divider()
+
+		Menu("Debug") {
+			Button("Cycle overlay states") { model.demo.cycle() }
+			Button("Rapid-fire overlay states") { model.demo.rapidCycle() }
+			Divider()
+			Button("Listening") { model.demo.show(.listening) }
+			Button("Working") { model.demo.show(.working) }
+			Button("Done") { model.demo.show(.done) }
+			Button("Recording") { model.demo.show(.recording(since: .now)) }
+			Button("Hide overlay") { model.demo.show(.hidden) }
+		}
+		#endif
+
 		Divider()
 
 		Button("Quit yap") {

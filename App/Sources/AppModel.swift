@@ -9,8 +9,17 @@ final class AppModel {
 	let overlay: OverlayController
 	private(set) var isTakingNotes = false
 
+	#if DEBUG
+	let demo: OverlayDemo
+	#endif
+
 	init() {
-		overlay = OverlayController()
+		let overlay = OverlayController()
+		self.overlay = overlay
+		#if DEBUG
+		demo = OverlayDemo(overlay: overlay)
+		demo.applyLaunchArguments()
+		#endif
 	}
 
 	var statusLine: String {
