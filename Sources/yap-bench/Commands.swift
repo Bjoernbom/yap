@@ -241,3 +241,30 @@ func runMemory(_ options: Options) async throws {
 	print("after unload:      \(unloaded.summary)")
 	print("ceiling \(format(footprintCeilingMB, 0)) MB footprint + \(format(neuralCeilingMB, 0)) MB neural: \(report.withinCeiling ? "PASS" : "FAIL")")
 }
+
+/// Times `FluidSpeakerDiarizer` the way notes use it: the "them" track on
+/// disk as 16 kHz Int16, diarized after stop. Loops the file to stand in for
+/// a long meeting without a long fixture.
+func runDiarize(_ options: Options) async throws {
+	let audio = try loadAudio(try options.requireFile())
+	let directory = FileManager.default.temporaryDirectory.appending(path: "yap-bench-diarize-\(UUID().uuidString)")
+	let recorder = try TrackRecorder(directory: directory)
+	defer { recorder.delete() }
+	for _ in 0..<options.loops { recorder.append(audio) }
+	recorder.close()
+	let recording = recorder.recording
+
+	let diarizer = FluidSpeakerDiarizer()
+	let prepareStart = clock.now
+	try await diarizer.prepare()
+	let prepareTime = clock.now - prepareStart
+	let start = clock.now
+	let turns = try await diarizer.diarize(recording)
+	let elapsed = clock.now - start
+	let memory = MemorySnapshot.now()
+	let speakers = Set(turns.map(\.speaker)).count
+	let seconds = milliseconds(elapsed) / 1000
+	print("audio \(format(recording.duration / 60, 1)) min, \(turns.count) turns, \(speakers) speakers")
+	print("prepare \(format(milliseconds(prepareTime), 0)) ms, diarize \(format(seconds, 1)) s (\(format(recording.duration / max(seconds, 0.001), 0))x real time)")
+	print("after: \(memory.summary)")
+}

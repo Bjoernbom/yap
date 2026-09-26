@@ -19,6 +19,9 @@ struct TranscriptStitcher {
 	private var carry: [TimedWord] = []
 	/// The last word taken, in stream time, to catch a word heard twice.
 	private var lastWord: TimedWord?
+	/// The words the last `add` contributed, in stream time. Empty when the
+	/// engine gave no timings. Notes use them to place and split segments.
+	private(set) var lastWords: [TimedWord] = []
 
 	/// Adds one chunk. `start` is where the chunk begins in the stream and
 	/// `keep` the part whose words are its own, both in seconds. Returns the
@@ -28,6 +31,7 @@ struct TranscriptStitcher {
 			// No timings (or nothing said): nothing to stitch by.
 			flushCarry()
 			lastWord = nil
+			lastWords = []
 			pieces.append(transcript.text)
 			return transcript.text
 		}
@@ -45,6 +49,7 @@ struct TranscriptStitcher {
 		}
 		let taken = fill + own
 		if let last = taken.last { lastWord = last }
+		lastWords = taken
 		let text = taken.map(\.text).joined(separator: " ")
 		pieces.append(text)
 		return text
@@ -55,6 +60,15 @@ struct TranscriptStitcher {
 	mutating func finish() -> String {
 		flushCarry()
 		return TranscriptJoiner.join(pieces)
+	}
+
+	/// Words the last chunk heard past its cut that no later chunk took (the
+	/// tail was silent). `finish` still includes them; this hands them out
+	/// first, for callers that build text from `lastWords`.
+	mutating func takeCarry() -> [TimedWord] {
+		let words = carry
+		flushCarry()
+		return words
 	}
 
 	private mutating func flushCarry() {

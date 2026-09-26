@@ -31,6 +31,8 @@ struct Options {
 	var polish = false
 	/// `text`: a JSON array of dictionary entries.
 	var dictionaryPath: String?
+	/// `diarize`: how many times to repeat the file.
+	var loops = 1
 
 	init(_ arguments: [String]) throws {
 		var rest = arguments[...]
@@ -75,6 +77,9 @@ struct Options {
 			case "--keep-warm":
 				guard let seconds = Double(try value()), seconds >= 0 else { throw BenchError.usage("bad --keep-warm") }
 				keepWarm = seconds
+			case "--loops":
+				guard let count = Int(try value()), count > 0 else { throw BenchError.usage("bad --loops") }
+				loops = count
 			case "--idle":
 				guard let seconds = Double(try value()), seconds >= 0 else { throw BenchError.usage("bad --idle") }
 				idle = seconds

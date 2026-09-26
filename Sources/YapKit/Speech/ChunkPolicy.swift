@@ -73,6 +73,10 @@ public struct ChunkPolicy: Sendable, Equatable {
 	/// once a chunk passes 4 s, and never exceed 10 s.
 	public static let dictation = ChunkPolicy()
 
+	/// Meeting notes: the same cuts, but nobody waits on a key-up, so the
+	/// engine isn't kept awake between chunks.
+	public static let notes = ChunkPolicy(keepWarmInterval: nil)
+
 	func samples(_ seconds: Double) -> Int {
 		Int((seconds * AudioChunk.sampleRate).rounded())
 	}

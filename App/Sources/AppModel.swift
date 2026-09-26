@@ -9,20 +9,25 @@ final class AppModel {
 	let dictation: DictationController
 	let text = TextSettingsStore()
 	let onboarding: OnboardingModel
-	private(set) var isTakingNotes = false
+	let notes: NotesController
 
 	#if DEBUG
 	let demo: OverlayDemo
+	private let notesCommands: NotesDebugCommands
 	#endif
 
 	init() {
 		let overlay = OverlayController()
 		self.overlay = overlay
-		dictation = DictationController(overlay: overlay)
+		let dictation = DictationController(overlay: overlay)
+		self.dictation = dictation
 		onboarding = OnboardingModel(dictation: dictation)
+		notes = NotesController(overlay: overlay, dictation: dictation)
+		overlay.onMeetingClick = { [notes] in notes.showLiveTranscript() }
 		var startsDictation = true
 		#if DEBUG
 		demo = OverlayDemo(overlay: overlay)
+		notesCommands = NotesDebugCommands(notes: notes, overlay: overlay)
 		demo.applyLaunchArguments()
 		let defaults = UserDefaults.standard
 		overlay.captureDirectory = defaults.string(forKey: "YapCaptureDir").map { URL(filePath: $0) }
@@ -35,16 +40,11 @@ final class AppModel {
 		dictation.processor = text.pipeline
 		if startsDictation {
 			dictation.start()
+			notes.start()
 		}
 	}
 
 	var statusLine: String {
-		isTakingNotes ? "Taking notes" : dictation.statusLine
-	}
-
-	/// Shell only: shows the recording notch until NotesSession exists.
-	func toggleNotes() {
-		isTakingNotes.toggle()
-		overlay.show(isTakingNotes ? .recording(since: .now) : .hidden)
+		notes.statusLine ?? dictation.statusLine
 	}
 }

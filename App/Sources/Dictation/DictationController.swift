@@ -24,6 +24,7 @@ final class DictationController {
 		static let modelFailed = "Couldn't load the speech model. Trying again."
 		static let nothingToPaste = "Nothing to paste yet."
 		static let gettingReadyPrefix = "Almost ready…"
+		static let pausedForNotes = "Dictation is off while taking notes."
 
 		static func gettingReady(_ fraction: Double?) -> String {
 			guard let fraction else { return gettingReadyPrefix }
@@ -47,11 +48,20 @@ final class DictationController {
 	/// The last model failure looked like no network: the first download
 	/// needs one, so onboarding says so instead of a generic line.
 	private(set) var modelFailedOffline = false
+	/// Notes are running: they own the mic and the model, so the key only
+	/// gets a notch line. Simplest safe choice, and the menu says so.
+	var isPausedForNotes = false {
+		didSet { logStatus() }
+	}
+	/// Called instead of starting a dictation while paused, so notes can put
+	/// their own notch back after the line.
+	@ObservationIgnored var onPausedPress: (() -> Void)?
 
 	@ObservationIgnored private let overlay: OverlayController
 	@ObservationIgnored private let monitor: HotkeyMonitor
-	@ObservationIgnored private let mic = MicCapture()
-	@ObservationIgnored private let engine = ParakeetEngine()
+	/// Shared with notes: one mic, one model on the Neural Engine.
+	@ObservationIgnored let mic = MicCapture()
+	@ObservationIgnored let engine = ParakeetEngine()
 	@ObservationIgnored private var session: DictationSession?
 	/// Cleanup, dictionary and polish; set by AppModel before `start()`.
 	@ObservationIgnored var processor: any TextProcessing = NoTextProcessing()
@@ -103,7 +113,7 @@ final class DictationController {
 		) { [weak self] _ in
 			MainActor.assumeIsolated { self?.checkPermissions() }
 		}
-		pasteLastKey = GlobalHotKey(keyCode: kVK_ANSI_V, modifiers: controlKey | cmdKey) { [weak self] in
+		pasteLastKey = GlobalHotKey(id: 1, keyCode: kVK_ANSI_V, modifiers: controlKey | cmdKey) { [weak self] in
 			self?.pasteLast()
 		}
 		Task { [history] in
@@ -114,6 +124,8 @@ final class DictationController {
 		checkPermissions()
 		prepareModel()
 	}
+
+	var isModelReady: Bool { modelStatus == .ready }
 
 	var statusLine: String {
 		if let missing = permissions.missingSummary { return missing }
@@ -331,6 +343,10 @@ final class DictationController {
 		Logger.dictation.debug("Hotkey \(String(describing: action), privacy: .public)")
 		switch action {
 		case .start:
+			if isPausedForNotes {
+				onPausedPress?()
+				return
+			}
 			if let blocker = startBlocker() {
 				overlay.show(.message(blocker))
 				return

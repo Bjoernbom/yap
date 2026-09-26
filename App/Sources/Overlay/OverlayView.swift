@@ -9,6 +9,8 @@ final class OverlayModel {
 	/// When the current state began; drives the fold and the tick draw-on.
 	var stateSince = Date.now
 	@ObservationIgnored let levels = AudioLevels()
+	/// A click on the red dot and timer while recording a meeting.
+	@ObservationIgnored var onMeetingClick: (() -> Void)?
 
 	init(geometry: NotchGeometry) {
 		self.geometry = geometry
@@ -78,6 +80,8 @@ struct OverlayView: View {
 		case .meeting:
 			if case .recording(let since) = model.state {
 				meeting(since: since, layout: layout)
+					.contentShape(Rectangle())
+					.onTapGesture { model.onMeetingClick?() }
 					.transition(.opacity)
 			}
 		}

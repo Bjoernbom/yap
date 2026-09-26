@@ -23,6 +23,9 @@ public actor StreamingTranscriber: StreamingTranscription {
 		/// Wall time of the engine call.
 		public var latency: Duration
 		public var text: String
+		/// The words behind `text` in seconds since `begin`, when the engine
+		/// gives timings. Notes use them to timestamp and split segments.
+		public var words: [TimedWord]
 	}
 
 	private struct Session {
@@ -195,11 +198,20 @@ public actor StreamingTranscriber: StreamingTranscription {
 				onChunk?(ChunkReport(
 					index: index, duration: chunk.duration,
 					reason: chunk.reason, start: chunk.start,
-					latency: clock.now - start, text: text))
+					latency: clock.now - start, text: text, words: stitcher.lastWords))
 				index += 1
 			}
 		}
 		try Task.checkCancellation()
+		// A cut inside speech followed by a silent tail leaves the overlap's
+		// words unreported; hand them out so a caller building text from
+		// reports loses nothing.
+		let carry = stitcher.takeCarry()
+		if let first = carry.first, let last = carry.last {
+			onChunk?(ChunkReport(
+				index: index, duration: last.end - first.start, reason: .tail, start: first.start,
+				latency: .zero, text: carry.map(\.text).joined(separator: " "), words: carry))
+		}
 		return stitcher.finish()
 	}
 }

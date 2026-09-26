@@ -178,6 +178,28 @@ YES` fails the first load as offline, `-YapSimulateNoAccessibility YES` (post
 be pressed through AX (`AXPress` on the button in window "Set up yap");
 `captureWindows` writes `window-set-up-yap.png`.
 
+## Notes
+
+Launch the binary with `-YapDefaultsSuite <name>` (the one-time consent line
+is `notesConsentShown` there), `-notesFolder <scratch>/notes` and
+`-YapNotesFallbackFolder <scratch>/fallback`, so nothing lands in
+`~/Documents/yap` or Application Support. Drive it with distributed
+notifications (`notify com.bjornbom.yap.debug.notes.<cmd>`): `start`, `stop`,
+`toggle` (what ⌥⌘N does; a real ⌥⌘N posted with CGEvent works too), `live`
+(what a click on the notch does), `where` (logs the timer's screen point, to
+click it), `capture` (writes `notes-live-transcript.png` / `notes-note.png` to
+`-YapCaptureDir`). The log (category `notes`, `notes-app`) has the stop
+timings and the path of the written note.
+
+- System audio from a binary launched in the shell is blocked (all zeros):
+  the note says so after ~3 s of playback. For two tracks without a call,
+  feed files: `-YapNotesMicFile you.wav -YapNotesThemFile them.wav
+  -YapNotesFileSpeed 8 -YapNotesFileLoops 13` (≈10 min of meeting in 75 s).
+- Memory while recording: `footprint <pid>`; it should stay flat.
+- The them-track audio lives in `$TMPDIR/yap-notes/` while recording and
+  must be gone after stop.
+- `yap-bench diarize <wav> --loops <n>` times the diarizer on long audio.
+
 ## Idle CPU
 
 ```bash
