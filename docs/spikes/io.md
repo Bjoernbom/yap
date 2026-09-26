@@ -244,7 +244,18 @@ public struct Inserter: Sendable {
 3. VP ducking of call audio during a real Zoom/Meet call on speakers. Decide VP vs raw +
    reference gating for notes (M3).
 4. VP + non-default device (AirPods default + built-in wanted): no working pin found.
-5. Mid-capture device changes (`AVAudioEngineConfigurationChange`) were not probed. Changing
-   the system default device is a user setting and was not touched.
-6. `AVAudioSinkNode` for smaller chunks (waveform) was not measured.
-7. Whether `engine.prepare()` shows the mic indicator.
+5. ~~Mid-capture device changes (`AVAudioEngineConfigurationChange`) were not probed.~~
+   M1: the engine posts this notification **by itself** ~200 ms after its input unit is
+   pinned, with nothing changed; rebuilding on it loops forever. `MicCapture` only acts when
+   the hardware format, the pinned device (or its `IsAlive`) or the running state changed.
+   On a real change mid-capture it rebuilds on the device the policy picks now and keeps the
+   same stream (gap visible in host times, ~170 ms measured); after 3 restarts in one
+   capture, or a failed restart, the stream finishes cleanly. Verified with a simulated
+   change (engine stopped + notification); a physical unplug is still a manual check.
+6. ~~`AVAudioSinkNode` for smaller chunks (waveform) was not measured.~~ M1: the sink gets
+   the device's IO buffers (~10 ms); a lock-free ring hands them to a pump that yields a
+   chunk every ~20 ms (cadence median 22 ms, max 30 ms). The tap stays at 100 ms.
+7. ~~Whether `engine.prepare()` shows the mic indicator.~~ M1: it does not. After
+   `prepare()` (and after `stop()`, which uses `pause()`), the device is not
+   running somewhere and the process's `kAudioProcessPropertyIsRunningInput` is 0.
+   Prepared start: mic live in 37–47 ms median.
