@@ -10,9 +10,9 @@ each under its own license. Thank you to everyone who made these.
 | [FluidAudio](https://github.com/FluidInference/FluidAudio) | Apache-2.0 | FluidInference. Includes components under their own licenses, listed in its [ThirdPartyLicenses](https://github.com/FluidInference/FluidAudio/tree/main/ThirdPartyLicenses) folder |
 | [GRDB.swift](https://github.com/groue/GRDB.swift) | MIT | Gwendal Roué |
 | [Sparkle](https://github.com/sparkle-project/Sparkle) | MIT-style | Andy Matuschak and the Sparkle Project contributors |
-| [Pixelify Sans](https://github.com/google/fonts/tree/main/ofl/pixelifysans) | SIL Open Font License 1.1 | The Pixelify Sans Project Authors; license in `App/Resources/Fonts/OFL.txt` |
+| [Pixelify Sans](https://github.com/google/fonts/tree/main/ofl/pixelifysans) | SIL Open Font License 1.1 | The Pixelify Sans Project Authors; full license text included with yap |
 
-## Models (downloaded on first run, not part of this repository)
+## Models (downloaded on first run, not bundled with yap)
 
 | Model | Used for | License | Credit |
 | --- | --- | --- | --- |
