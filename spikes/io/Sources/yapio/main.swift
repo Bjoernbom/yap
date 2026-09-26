@@ -11,7 +11,10 @@ usage: yapio <command> [options]
   calls     [--demo | --seconds N] [--verbose]  who uses the mic (call detection)
   insert    [--runs N] [--secure-demo] [--pasteboard-only]   AX / ⌘V insertion into TextEdit
   devices   [--pin-test]                        input devices, transport, pinning
+  wavstat   <file.wav>... [--window S]          levels read back from a WAV file
 """
+
+setvbuf(stdout, nil, _IOLBF, 0)
 
 signal(SIGINT) { _ in
 	Children.shared.killAll()
@@ -29,6 +32,7 @@ MainActor.assumeIsolated {
 	case "calls": runCalls(args)
 	case "insert": runInsert(args)
 	case "devices": runDevices(args)
+	case "wavstat": runWavStat(args)
 	default: print(usage)
 	}
 }

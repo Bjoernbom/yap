@@ -42,7 +42,7 @@ func runDevices(_ args: Args) {
 			let status = pinInput(engine, to: builtIn.id)
 			let current = currentInputDevice(engine)
 			let format = engine.inputNode.outputFormat(forBus: 0)
-			engine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { _, _ in }
+			engine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format, block: tapBlock(nil))
 			var startError = ""
 			do { try engine.start() } catch { startError = " start error: \(error)" }
 			runLoop(for: 0.5)

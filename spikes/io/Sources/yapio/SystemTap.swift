@@ -142,6 +142,33 @@ func report(_ name: String, _ r: TapResult, url: URL) {
 	print("  \(name): callbacks \(r.callbacks), first after \(first), \(r.level.summary) -> \(url.lastPathComponent)")
 }
 
+/// Reads a WAV back from disk and prints overall and windowed levels, proving the file itself
+/// is (or is not) silent.
+func runWavStat(_ args: Args) {
+	let window = args.double("window", 0.5)
+	for path in args.raw.dropFirst() where !path.hasPrefix("--") && path.hasSuffix(".wav") {
+		let url = URL(fileURLWithPath: path)
+		guard let file = try? AVAudioFile(forReading: url),
+			let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)),
+			(try? file.read(into: buffer)) != nil
+		else { print("\(path): unreadable"); continue }
+		let rate = file.processingFormat.sampleRate
+		print("\(url.lastPathComponent): \(String(format: "%.2f", Double(file.length) / rate)) s, \(rate) Hz, \(file.processingFormat.channelCount) ch, \(level(of: buffer).summary)")
+		guard window > 0, let data = buffer.floatChannelData else { continue }
+		let step = Int(rate * window)
+		var line: [String] = []
+		var start = 0
+		while start < Int(buffer.frameLength) {
+			let n = min(step, Int(buffer.frameLength) - start)
+			var l = Level()
+			for c in 0..<Int(buffer.format.channelCount) { l.add(UnsafeBufferPointer(start: data[c] + start, count: n)) }
+			line.append(l.rms > 0 ? String(format: "%.0f", 20 * log10(l.rms)) : "-inf")
+			start += step
+		}
+		print("  dBFS per \(window) s: \(line.joined(separator: " "))")
+	}
+}
+
 @MainActor
 func runSystemTap(_ args: Args) {
 	print("== System audio (Core Audio process tap)")
