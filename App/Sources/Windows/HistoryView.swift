@@ -52,6 +52,10 @@ struct HistoryView: View {
 					HistoryRow(entry: entry, copied: copiedID != nil && copiedID == entry.id)
 				}
 				.buttonStyle(.plain)
+				// A plain button with a custom label is otherwise read out as just "button".
+				.accessibilityLabel(entry.text)
+				.accessibilityValue(Text(entry.createdAt, format: .relative(presentation: .named)))
+				.accessibilityHint("Copies it")
 			}
 		}
 	}
