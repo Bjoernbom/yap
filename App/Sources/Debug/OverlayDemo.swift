@@ -9,6 +9,8 @@ import AppKit
 ///   that state at launch (`done` stays up).
 /// - `-YapOverlayScreen notch` prefers the built-in notched screen.
 /// - `-YapSnapshots <dir>` renders every state to PNGs in `<dir>` and quits.
+/// - `-YapProbe <dir>` runs `OverlayProbe` against the live panel.
+/// - `-YapOpenWindows YES` opens History and Settings at launch.
 @MainActor
 final class OverlayDemo {
 	private let overlay: OverlayController
@@ -65,6 +67,11 @@ final class OverlayDemo {
 				OverlaySnapshots.write(to: URL(filePath: directory))
 				NSApp.terminate(nil)
 			}
+			return
+		}
+		if let directory = defaults.string(forKey: "YapProbe") {
+			let probe = OverlayProbe(overlay: overlay, demo: self, directory: URL(filePath: directory))
+			Task { await probe.run() }
 			return
 		}
 		guard let name = defaults.string(forKey: "YapDebugOverlay") else { return }

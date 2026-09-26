@@ -20,6 +20,9 @@ final class OverlayController {
 	#if DEBUG
 	/// Keeps the tick on screen for reviewing the look.
 	var holdsDone = false
+	/// The live panel, for the verification probe.
+	var debugPanel: NSPanel? { panel }
+	var debugGeometry: NotchGeometry { model.geometry }
 	#endif
 
 	init() {

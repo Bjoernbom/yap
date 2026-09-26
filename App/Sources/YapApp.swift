@@ -13,6 +13,9 @@ struct YapApp: App {
 			MenuContent(model: model)
 		} label: {
 			Image(nsImage: MenuBarIcon.image)
+			#if DEBUG
+				.modifier(DebugWindowOpener())
+			#endif
 		}
 		.menuBarExtraStyle(.menu)
 
