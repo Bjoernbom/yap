@@ -69,7 +69,7 @@ step() { printf '\n==> %s\n' "$*"; }
 step "Building yap $version ($build_number)"
 rm -rf "$dist" "$app"
 mkdir -p "$dist"
-xcodegen generate --quiet
+make project
 set -- MARKETING_VERSION="$version" CURRENT_PROJECT_VERSION="$build_number"
 if [ -n "${SPARKLE_PUBLIC_KEY:-}" ]; then
 	set -- "$@" SPARKLE_PUBLIC_KEY="$SPARKLE_PUBLIC_KEY"
