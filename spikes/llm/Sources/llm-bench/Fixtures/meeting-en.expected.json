@@ -1,0 +1,32 @@
+{
+	"language": "en",
+	"durationMinutes": 45,
+	"title": "Migration Incident Review and Q4 Roadmap Sync",
+	"decisions": [
+		"Schema migrations on tables with more than 10 million rows must set a lock timeout (enforced in CI), get a platform-team review, and run outside peak hours (before 8 AM or after 7 PM Eastern).",
+		"Q4 SSO scope is SAML with Okta as the first identity provider, Enterprise plan only, with a beta around November 16; Azure AD and SCIM move to Q1.",
+		"Run the usage-based pricing experiment on 10% of new self-serve signups ($29/month platform fee plus $2 per 10,000 events) for eight weeks starting October 20, billed via Stripe metered billing; existing customers are not affected.",
+		"The mobile app is not sunset this year; it goes into maintenance mode (security and OS compatibility fixes only, no new features) and is revisited in Q2.",
+		"On-call moves to half-week shifts (Monday to Thursday, Thursday to Monday) with a formal secondary and 15-minute escalation, starting October 5.",
+		"Northwind Freight gets a one-month goodwill credit (about $52,000) on its next invoice, framed as goodwill rather than an SLA credit."
+	],
+	"actionItems": [
+		{ "task": "Write and publish the internal incident postmortem on Confluence, plus a short customer-facing version, by Thursday October 1", "owner": "Priya" },
+		{ "task": "Add a CI lint check to the migration pipeline that fails the build when a migration does not set a lock timeout, by October 9", "owner": "Tom" },
+		{ "task": "Set up an Okta developer tenant, spike the SAML library, and share a short writeup by Friday", "owner": "Tom" },
+		{ "task": "Write the pricing experiment one-pager (pricing, success metrics, spending cap) by October 9", "owner": "Grace" },
+		{ "task": "Set up the new on-call schedule in PagerDuty with primary and secondary layers and 15-minute escalation, removing Dan from November 9, live before October 5", "owner": "Priya" },
+		{ "task": "Call Diane Walsh at Northwind on Thursday to walk through the incident, offer the credit, and confirm the mobile app is staying", "owner": "Marcus" },
+		{ "task": "Get the Northwind goodwill credit signed off by Anna in finance by Wednesday", "owner": "you" },
+		{ "task": "Update the Q4 roadmap doc with today's decisions (Northwind in its own section) and share it with the leadership team by Friday", "owner": "you" },
+		{ "task": "Update the outdated status page runbook (still references Statuspage instead of Instatus) so the first status post goes out within 10 minutes of an incident being declared", "owner": null }
+	],
+	"notDecided": [
+		"Moving the events table off the main Postgres cluster (partitioning, Aurora, or Timescale); parked until Q1 planning",
+		"A change freeze for the last two weeks of December; to be revisited in November"
+	],
+	"reversed": {
+		"initial": "Sunset the mobile app: announce in October, pull it from the app stores, and shut it down on December 31",
+		"final": "Keep the mobile app in maintenance mode (security and compatibility fixes only) with no sunset this year and revisit in Q2, because about 1,200 Northwind drivers depend on it"
+	}
+}

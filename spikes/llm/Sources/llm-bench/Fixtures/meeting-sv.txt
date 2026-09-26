@@ -14,7 +14,7 @@
 [00:02:03] speaker 3: Hur fuskar man i Alfapet?
 [00:02:07] speaker 1: Han hittar på ord. Och sen säger han att det är jämtska.
 [00:02:14] speaker 2: Haha, det är ju smart.
-[00:02:18] you: Haha. Okej. Eh, ska vi, ska vi börja? Vi har ganska mycket idag. Jag tänkte att vi tar sprinten först, sen den där kraschen på Android, och sen måste vi faktiskt bestämma oss om releasen. Och sen pris för Plus, lite supportgrejer från Amira, och till sist designerrekryteringen. Låter det okej?
+[00:02:18] you: Haha. Okej. Eh, ska vi, ska vi börja? Vi har ganska mycket idag. Jag tänkte att vi tar sprinten först, sen den där kraschen på Android, och sen måste vi faktiskt bestämma oss om releasen av Slant 3.2. Och sen pris för Slant Plus, lite supportgrejer från Amira, och till sist designerrekryteringen. Låter det okej?
 [00:02:40] speaker 3: Ja.
 [00:02:43] speaker 2: Kör.
 [00:02:46] you: Sara, vill du börja med sprinten?
@@ -108,7 +108,7 @@
 [00:16:33] you: Bara en halv?
 [00:16:36] speaker 1: Ja, i början. Det växer ju förhoppningsvis.
 [00:16:41] speaker 2: Varför inte trettionio då? Då är vi billigast.
-[00:16:46] speaker 1: Man vill inte vara billigast, tror jag. Då ser det ut som att det är sämre. Och vi har bankkopplingen, det har inte Pengakollen.
+[00:16:46] speaker 1: Man vill inte vara billigast, tror jag. Då ser det ut som att Slant är sämre. Och vi har bankkopplingen, det har inte Pengakollen.
 [00:16:57] speaker 2: Mm. Men femtionio då? Budgetbuddy tar femtionio.
 [00:17:01] speaker 1: Enkäten sa ju att det sjönk ganska mycket över femtio. Så det känns som att fyrtionio är sweet spot.
 [00:17:10] you: Jag håller med Sara. Och vi kan alltid höja senare, det är svårare att sänka.
