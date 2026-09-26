@@ -14,6 +14,7 @@ struct YapApp: App {
 		} label: {
 			Image(nsImage: MenuBarIcon.image)
 				.modifier(OnboardingOpener(onboarding: model.onboarding))
+				.modifier(NotesWindowOpener(notes: model.notes))
 			#if DEBUG
 				.modifier(DebugWindowOpener())
 			#endif
@@ -33,6 +34,20 @@ struct YapApp: App {
 		.windowStyle(.hiddenTitleBar)
 		.windowResizability(.contentSize)
 		.defaultWindowPlacement { _, _ in WindowPlacement(.center) }
+		.defaultLaunchBehavior(.suppressed)
+		.restorationBehavior(.disabled)
+
+		Window("Live transcript", id: WindowID.liveTranscript) {
+			LiveTranscriptView(notes: model.notes)
+		}
+		.defaultSize(width: 480, height: 520)
+		.defaultLaunchBehavior(.suppressed)
+		.restorationBehavior(.disabled)
+
+		Window("Note", id: WindowID.note) {
+			NoteView(notes: model.notes)
+		}
+		.defaultSize(width: 620, height: 680)
 		.defaultLaunchBehavior(.suppressed)
 		.restorationBehavior(.disabled)
 

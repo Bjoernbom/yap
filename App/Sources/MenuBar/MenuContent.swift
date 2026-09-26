@@ -28,10 +28,23 @@ struct MenuContent: View {
 		}
 		.keyboardShortcut("v", modifiers: [.control, .command])
 
-		Button(model.isTakingNotes ? "Stop notes" : "Start notes") {
-			model.toggleNotes()
+		// ⌥⌘N works system-wide too (`NotesController` registers it).
+		Button(model.notes.menuTitle) {
+			model.notes.toggle()
 		}
 		.keyboardShortcut("n", modifiers: [.option, .command])
+		.disabled(model.notes.phase == .finishing)
+
+		if model.notes.isRecording {
+			Button("Live transcript") {
+				model.notes.showLiveTranscript()
+			}
+		}
+		if model.notes.lastNote != nil {
+			Button("Last note") {
+				model.notes.showLastNote()
+			}
+		}
 
 		Button("History") {
 			bringToFront()
@@ -90,6 +103,8 @@ struct MenuContent: View {
 enum WindowID {
 	static let history = "history"
 	static let onboarding = "onboarding"
+	static let liveTranscript = "live-transcript"
+	static let note = "note"
 	#if DEBUG
 	static let tryIt = "try-it"
 	#endif

@@ -100,17 +100,23 @@ public struct MarkdownWriter: Sendable {
 
 		lines.append("## Transcript")
 		lines.append("")
-		for paragraph in TranscriptMerger.merge(note.segments) {
+		for paragraph in Self.paragraphs(of: note) {
 			lines.append("**\(paragraph.speaker.label)** [\(Self.clock(paragraph.start))] \(paragraph.text)")
 			lines.append("")
 		}
 		return lines.joined(separator: "\n")
 	}
 
+	/// The transcript as the file shows it: consecutive segments from one
+	/// speaker merged into paragraphs.
+	public static func paragraphs(of note: Note) -> [NoteSegment] {
+		TranscriptMerger.merge(note.segments)
+	}
+
 	// MARK: - Helpers
 
 	/// `mm:ss`, or `h:mm:ss` from an hour on.
-	static func clock(_ seconds: Double) -> String {
+	public static func clock(_ seconds: Double) -> String {
 		let total = max(0, Int(seconds.rounded(.down)))
 		let (hours, minutes, rest) = (total / 3600, total / 60 % 60, total % 60)
 		let two = { (value: Int) in value < 10 ? "0\(value)" : "\(value)" }
