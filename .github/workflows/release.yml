@@ -1,0 +1,133 @@
+name: release
+
+# Push a tag like v1.0.0-beta.1 on main. The result is always a GitHub
+# *pre-release*: yap 0.4's updater reads releases/latest/download/latest.json,
+# so no 1.x release may become "latest" until 0.4 users are migrated.
+on:
+  push:
+    tags: ["v1.*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the build number is the commit count
+
+      - name: Tag is on main
+        # Sparkle compares build numbers (commits on HEAD), which only grow on main.
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Test YapKit
+        run: swift test
+
+      - name: Signing certificate
+        id: signing
+        env:
+          P12_BASE64: ${{ secrets.SIGNING_CERTIFICATE_P12 }}
+          P12_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [ -n "$P12_BASE64" ] && [ -n "$P12_PASSWORD" ]; then
+            printf '%s' "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+            identity=$(scripts/signing/ci-keychain.sh "$RUNNER_TEMP/signing.p12" "$P12_PASSWORD")
+            rm "$RUNNER_TEMP/signing.p12"
+            echo "identity=$identity" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No signing certificate secrets: this release is AD-HOC signed, so macOS permissions won't survive updates."
+          fi
+          if [ -n "$P12_BASE64" ] && [ -n "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Signing certificate or Sparkle key missing: packaging as a dry run and leaving the appcast alone."
+            echo "mode=dry-run" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package
+        env:
+          YAP_SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          MODE: ${{ steps.signing.outputs.mode }}
+        run: |
+          if [ "$MODE" = release ]; then
+            scripts/release/package.sh "$TAG"
+          else
+            scripts/release/package.sh --dry-run "$TAG"
+          fi
+
+      - name: GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.signing.outputs.mode }}
+        run: |
+          version=${TAG#v}
+          notes="$RUNNER_TEMP/notes.md"
+          {
+            echo "Install or update:"
+            echo
+            echo '```'
+            echo "curl -fsSL https://github.com/Bjoernbom/yap/releases/download/$TAG/install.sh | sh"
+            echo '```'
+            echo
+            echo "Or \`brew install --cask bjornbom/tap/yap\`, or the DMG below (first launch: System Settings → Privacy & Security → Open Anyway)."
+            if [ "$MODE" != release ]; then
+              echo
+              echo "**Test build:** not signed with the release certificate or Sparkle key."
+            fi
+          } > "$notes"
+          set -- "dist/yap-$version.zip" "dist/yap-$version.dmg" dist/SHA256SUMS dist/install.sh
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # A re-run: replace the assets, keep it a pre-release.
+            gh release upload "$TAG" "$@" --clobber
+            gh release edit "$TAG" --prerelease --latest=false
+          else
+            gh release create "$TAG" "$@" --verify-tag --prerelease --latest=false \
+              --title "yap $version" --notes-file "$notes" --generate-notes
+          fi
+
+      - name: Publish the appcast
+        if: steps.signing.outputs.mode == 'release'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp dist/appcast-item.xml "$RUNNER_TEMP/appcast-item.xml"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B appcast-update origin/main
+            scripts/release/update-appcast.sh "$RUNNER_TEMP/appcast-item.xml" appcast.xml
+            git commit -m "appcast: yap ${TAG#v}" appcast.xml
+            if git push origin HEAD:main; then exit 0; fi
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Homebrew cask
+        run: |
+          {
+            echo "### Homebrew cask"
+            echo
+            echo "Copy into \`Casks/yap.rb\` in Bjoernbom/homebrew-tap:"
+            echo
+            echo '```ruby'
+            scripts/release/render-cask.sh "$TAG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the temporary keychain
+        if: always()
+        run: |
+          keychain="$RUNNER_TEMP/yap-signing.keychain-db"
+          if [ -f "$keychain" ]; then security delete-keychain "$keychain"; fi
