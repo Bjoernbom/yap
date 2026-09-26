@@ -23,7 +23,7 @@ extension InsertOutcome {
 	/// The text landed in the target app.
 	public var didInsert: Bool {
 		switch self {
-		case .ax, .paste: true
+		case .ax, .direct, .paste: true
 		case .secureField, .noTarget, .focusChanged, .failed: false
 		}
 	}
@@ -32,7 +32,7 @@ extension InsertOutcome {
 	/// one line, what happened and where the text is. Nil when it landed.
 	public var message: String? {
 		switch self {
-		case .ax, .paste: nil
+		case .ax, .direct, .paste: nil
 		case .secureField: "That's a password field. It's on your clipboard."
 		case .focusChanged: "You switched apps. It's on your clipboard."
 		case .noTarget, .failed: "Couldn't type here. It's on your clipboard."

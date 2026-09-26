@@ -14,6 +14,8 @@ public struct FocusTarget: Sendable, Equatable {
 public enum InsertOutcome: Sendable, Equatable {
 	/// Set directly through Accessibility and read back.
 	case ax
+	/// Typed straight into one of yap's own windows through AppKit.
+	case direct
 	/// Pasted; the user's clipboard was restored.
 	case paste
 	/// Password field: nothing typed.
