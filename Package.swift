@@ -26,5 +26,7 @@ let package = Package(
 		// Dev harness: drives DictationSession through the public API with
 		// scripted fakes and the real history store.
 		.executableTarget(name: "yap-harness-session", dependencies: ["YapKit"]),
+		// Dev-only runtime check for Input/Output in the harness's own windows. Not a product.
+		.executableTarget(name: "yap-harness-io", dependencies: ["YapKit"]),
 	]
 )
