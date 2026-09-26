@@ -109,9 +109,11 @@ enum Bench {
 enum BenchError: Error, CustomStringConvertible {
 	case missingFixture(String)
 	case badArgument(String)
+	case modelUnavailable
 
 	var description: String {
 		switch self {
+		case .modelUnavailable: "model unavailable"
 		case .missingFixture(let name): "missing fixture \(name)"
 		case .badArgument(let text): "bad argument: \(text)"
 		}

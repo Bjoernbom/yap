@@ -20,7 +20,8 @@ enum AvailabilityProbe {
 
 	/// The macOS 26.1 SDK has no `contextSize` API, so find the window empirically:
 	/// binary-search the prompt length at which `exceededContextWindowSize` is thrown.
-	static func probeContext() async {
+	static func probeContext() async throws {
+		guard Bench.requireModel() else { throw BenchError.modelUnavailable }
 		let filler = "The quick brown fox jumps over the lazy dog near the river bank. "
 		func prompt(_ repeats: Int) -> String {
 			"Reply with OK.\n" + String(repeating: filler, count: repeats)

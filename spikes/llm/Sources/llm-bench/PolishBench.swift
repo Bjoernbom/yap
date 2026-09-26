@@ -32,7 +32,7 @@ struct PolishRun: Codable, Sendable {
 ///  [--prewarm on,off] [--speak-ms 800] [--all-styles] [--only sv-05-question]`
 enum PolishBench {
 	static func run(_ options: Options) async throws {
-		guard Bench.requireModel() else { return }
+		guard Bench.requireModel() else { throw BenchError.modelUnavailable }
 
 		let data = try Data(contentsOf: try Bench.fixtureURL("polish-corpus.json"))
 		var cases = try JSONDecoder().decode([PolishCase].self, from: data)

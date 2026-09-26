@@ -48,7 +48,7 @@ enum SummaryBench {
 		let parallel = max(options.int("parallel", default: 1), 1)
 		let dryRun = options.flag("dry-run")
 
-		if !dryRun, !Bench.requireModel() { return }
+		if !dryRun, !Bench.requireModel() { throw BenchError.modelUnavailable }
 
 		var runs: [SummaryRun] = []
 		var expectations: [String: ExpectedMeeting] = [:]

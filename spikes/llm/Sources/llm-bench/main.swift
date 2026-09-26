@@ -9,7 +9,7 @@ do {
 	case "availability":
 		await AvailabilityProbe.run()
 	case "context":
-		await AvailabilityProbe.probeContext()
+		try await AvailabilityProbe.probeContext()
 	case "polish":
 		try await PolishBench.run(options)
 	case "summary":
@@ -34,6 +34,9 @@ do {
 		                 [--text "..." --lang sv|en --style casual|proper|dev] [--force] [--timeout-ms 1500]
 		""")
 	}
+} catch BenchError.modelUnavailable {
+	// Distinct exit code so a script can tell "didn't run" from "ran and failed".
+	exit(2)
 } catch {
 	print("failed: \(error)")
 	exit(1)
