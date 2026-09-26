@@ -7,7 +7,8 @@ import AppKit
 /// Launch arguments:
 /// - `-YapDebugOverlay listening|working|done|recording|cycle|rapid` shows
 ///   that state at launch (`done` stays up).
-/// - `-YapOverlayScreen notch` prefers the built-in notched screen.
+/// - `-YapOverlayScreen notch|plain` pins the notch to a screen with or
+///   without a hardware notch, instead of the one with the pointer.
 /// - `-YapSnapshots <dir>` renders every state to PNGs in `<dir>` and quits.
 /// - `-YapProbe <dir>` runs `OverlayProbe` against the live panel.
 /// - `-YapOpenWindows YES` opens History and Settings at launch.

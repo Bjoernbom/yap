@@ -133,9 +133,10 @@ final class OverlayController {
 	/// The screen the user is looking at: the one with the pointer.
 	private static func targetScreen() -> NSScreen {
 		#if DEBUG
-		if UserDefaults.standard.string(forKey: "YapOverlayScreen") == "notch",
-		   let notched = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) {
-			return notched
+		// "notch" or "plain" pins the overlay to a screen with or without one.
+		if let preference = UserDefaults.standard.string(forKey: "YapOverlayScreen"),
+		   let screen = NSScreen.screens.first(where: { ($0.safeAreaInsets.top > 0) == (preference == "notch") }) {
+			return screen
 		}
 		#endif
 		let pointer = NSEvent.mouseLocation
