@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import Testing
 @testable import YapKit
 
@@ -111,6 +112,30 @@ import Testing
 		}
 		let second = try SQLiteHistoryStore(url: url)
 		#expect(try await second.search("sparad", limit: 10).count == 1)
+	}
+
+	@Test func opensAndReadsWhileAnotherProcessHoldsTheWriteLock() async throws {
+		let dir = FileManager.default.temporaryDirectory.appending(path: "yap-history-\(UUID().uuidString)")
+		defer { try? FileManager.default.removeItem(at: dir) }
+		let url = dir.appending(path: "history.sqlite")
+		let running = try SQLiteHistoryStore(url: url)
+		try await running.save(HistoryEntry(text: "före låset", appBundleID: nil, duration: 1))
+
+		// A second connection, like a DB browser, takes the write lock.
+		var locker: OpaquePointer?
+		#expect(sqlite3_open(url.path(percentEncoded: false), &locker) == SQLITE_OK)
+		defer { sqlite3_close(locker) }
+		#expect(sqlite3_exec(locker, "BEGIN IMMEDIATE", nil, nil, nil) == SQLITE_OK)
+
+		let reopened = try SQLiteHistoryStore(url: url, busyTimeout: 0.1)
+		#expect(try await reopened.search("lase", limit: 10).count == 1)
+		await #expect(throws: (any Error).self) {
+			try await reopened.save(HistoryEntry(text: "under låset", appBundleID: nil, duration: 1))
+		}
+
+		#expect(sqlite3_exec(locker, "COMMIT", nil, nil, nil) == SQLITE_OK)
+		try await reopened.save(HistoryEntry(text: "efter låset", appBundleID: nil, duration: 1))
+		#expect(try await running.search("låset", limit: 10).map(\.text).sorted() == ["efter låset", "före låset"])
 	}
 
 	@Test func prefixPattern() {
