@@ -57,8 +57,13 @@ final class DictationController {
 	/// Presses made before the model was ready never do.
 	@ObservationIgnored private var forwarding = false
 	@ObservationIgnored private var keyUpAt: ContinuousClock.Instant?
+	@ObservationIgnored private var keyDownAt: ContinuousClock.Instant?
 	/// Feeds the notch's waveform during one listening stretch.
 	@ObservationIgnored private var levelSink: AsyncStream<Float>.Continuation?
+	/// Listening started but the notch isn't showing it yet: a stray tap of
+	/// the key (common with Fn) must not flash the notch.
+	@ObservationIgnored private var awaitingReveal = false
+	@ObservationIgnored private var revealTask: Task<Void, Never>?
 	@ObservationIgnored private var lastLoggedStatus = ""
 
 	init(overlay: OverlayController) {
@@ -262,7 +267,7 @@ final class DictationController {
 		let levels = session.levels
 		loops.append(Task { [weak self] in
 			for await level in levels {
-				self?.levelSink?.yield(level)
+				self?.levelArrived(level)
 			}
 		})
 	}
@@ -281,6 +286,7 @@ final class DictationController {
 			}
 			guard let session else { return }
 			forwarding = true
+			keyDownAt = .now
 			await session.handle(.start)
 		case .stop, .cancel, .lock:
 			guard forwarding, let session else { return }
@@ -309,18 +315,38 @@ final class DictationController {
 
 	// MARK: - Notch
 
+	/// How long the key must be held before the notch shows listening. Long
+	/// enough to swallow a stray tap (~100 ms), short enough that a real hold
+	/// still sees the notch right away (budget: 200 ms).
+	private static let revealDelay: Duration = .milliseconds(150)
+	/// A level this loud (about -39 dBFS) while the key is held is speech,
+	/// not room noise: show the notch without waiting out the delay.
+	private static let audibleLevel: Float = 0.35
+	/// A press that ended, as a tap or as too little audio, within this long
+	/// of key-down was an accident: close without a shrink or a message. It
+	/// covers the 300 ms tap threshold plus the 300 ms double-tap window.
+	private static let strayPress: Duration = .milliseconds(700)
+
 	private func apply(_ state: DictationState) {
+		let pressWasStray = keyDownAt.map { (keyUpAt ?? .now) - $0 < Self.strayPress } ?? false
+		if state != .listening(locked: false) {
+			cancelReveal()
+		}
 		switch state {
 		case .idle:
+			keyDownAt = nil
 			endLevels()
 			// After a result the notch closes by itself; after a cancel, now.
 			if [.listening, .working].contains(overlay.state) {
-				overlay.hide()
+				overlay.hide(animated: !pressWasStray)
 			}
-		case .listening:
-			if overlay.state != .listening {
-				startLevels()
-				overlay.show(.listening)
+		case .listening(let locked):
+			guard overlay.state != .listening else { break }
+			// Hands-free was chosen on purpose (double-tap): show it right away.
+			if locked {
+				revealListening()
+			} else if !awaitingReveal {
+				deferReveal()
 			}
 		case .transcribing:
 			endLevels()
@@ -335,11 +361,49 @@ final class DictationController {
 			}
 		case .empty:
 			keyUpAt = nil
-			overlay.show(.message(Message.emptyTranscript))
+			if pressWasStray {
+				overlay.hide(animated: false)
+			} else {
+				overlay.show(.message(Message.emptyTranscript))
+			}
 		case .failed(let message):
 			keyUpAt = nil
 			overlay.show(.message(message))
 		}
+	}
+
+	/// Shows listening once the key has been held for `revealDelay`. A tap
+	/// has already been released by then (it emits no action on release, as
+	/// it may turn into a double-tap), so ask the monitor for the key itself.
+	private func deferReveal() {
+		awaitingReveal = true
+		revealTask = Task { [weak self] in
+			try? await Task.sleep(for: Self.revealDelay)
+			guard !Task.isCancelled, let self, self.awaitingReveal, self.monitor.isTriggerHeld else { return }
+			self.revealListening()
+		}
+	}
+
+	private func revealListening() {
+		cancelReveal()
+		startLevels()
+		overlay.show(.listening)
+		if let keyDownAt {
+			Logger.dictation.notice("Key-down to listening shown: \(Self.milliseconds(since: keyDownAt), format: .fixed(precision: 1), privacy: .public) ms")
+		}
+	}
+
+	private func cancelReveal() {
+		awaitingReveal = false
+		revealTask?.cancel()
+		revealTask = nil
+	}
+
+	private func levelArrived(_ level: Float) {
+		if awaitingReveal, level >= Self.audibleLevel, monitor.isTriggerHeld {
+			revealListening()
+		}
+		levelSink?.yield(level)
 	}
 
 	private func startLevels() {
@@ -367,9 +431,13 @@ final class DictationController {
 			return
 		}
 		self.keyUpAt = nil
-		let elapsed = ContinuousClock.now - keyUpAt
-		let milliseconds = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1e15
+		let milliseconds = Self.milliseconds(since: keyUpAt)
 		Logger.dictation.notice("Key-up to \(String(describing: outcome), privacy: .public): \(milliseconds, format: .fixed(precision: 1), privacy: .public) ms")
+	}
+
+	private static func milliseconds(since instant: ContinuousClock.Instant) -> Double {
+		let elapsed = ContinuousClock.now - instant
+		return Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1e15
 	}
 
 	private func logStatus() {

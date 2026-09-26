@@ -80,10 +80,19 @@ final class OverlayController {
 		#endif
 	}
 
-	func hide() {
+	/// `animated: false` for a stray tap: the notch was only there by accident,
+	/// so it goes without drawing more attention with a shrink.
+	func hide(animated: Bool = true) {
 		dismissTask?.cancel()
 		stopLevels()
 		guard model.state != .hidden else { return }
+		guard animated else {
+			var transaction = Transaction()
+			transaction.disablesAnimations = true
+			withTransaction(transaction) { model.state = .hidden }
+			panel?.orderOut(nil)
+			return
+		}
 		withAnimation(Self.shrink) {
 			model.state = .hidden
 		} completion: { [weak self] in

@@ -38,7 +38,7 @@ struct HotkeyEventInterpreter: Sendable {
 
 	let trigger: HotkeyTrigger
 	private(set) var machine: HotkeyStateMachine
-	private var triggerHeld = false
+	private(set) var triggerHeld = false
 	/// Keys whose `keyDown` we swallowed. Their repeats and `keyUp` must be swallowed too,
 	/// or the app sees a release (or repeats) for a press it never got.
 	private var swallowedKeys: Set<Int64> = []
