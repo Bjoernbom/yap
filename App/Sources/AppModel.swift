@@ -6,14 +6,20 @@ import Observation
 @MainActor
 @Observable
 final class AppModel {
+	let overlay: OverlayController
 	private(set) var isTakingNotes = false
+
+	init() {
+		overlay = OverlayController()
+	}
 
 	var statusLine: String {
 		isTakingNotes ? "Taking notes" : "Hold fn to talk"
 	}
 
-	/// Shell only: flips the state until NotesSession exists.
+	/// Shell only: shows the recording notch until NotesSession exists.
 	func toggleNotes() {
 		isTakingNotes.toggle()
+		overlay.show(isTakingNotes ? .recording(since: .now) : .hidden)
 	}
 }
