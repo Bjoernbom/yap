@@ -10,13 +10,15 @@ enum PolishStyle: String, CaseIterable, Codable, Sendable {
 }
 
 /// Prototype of YapKit's `Text/Polisher`: one fresh session per dictation, created and
-/// prewarmed at key-down, used once at key-up. Every failure path returns `nil` so the
-/// caller inserts the deterministic cleanup instead; polish must never lose words.
+/// prewarmed at key-down, used once at key-up. The caller treats a gate skip, a throw, a
+/// timeout or a guard hit the same way: insert the deterministic cleanup instead, so
+/// polish can never lose or invent words.
 struct Polisher: Sendable {
 	enum Output: String, Codable, Sendable {
-		/// `respond(to:) -> String`. Works with permissive guardrails.
+		/// `respond(to:) -> String`, the case `permissiveContentTransformations` is documented for.
 		case plain
-		/// `respond(to:generating: PolishedText.self)`. No preamble possible, default guardrails only.
+		/// `respond(to:generating: PolishedText.self)`. Rules out preambles by construction;
+		/// whether permissive guardrails still apply here is one of the things to measure.
 		case guided
 	}
 
@@ -208,6 +210,7 @@ enum PolishGuard {
 	}
 
 	static func dominantLanguage(_ text: String) -> String? {
+		// Constrained to the languages a dictation plausibly mixes up with sv/en.
 		let recognizer = NLLanguageRecognizer()
 		recognizer.languageConstraints = [.swedish, .english, .norwegian, .danish, .german]
 		recognizer.processString(text)

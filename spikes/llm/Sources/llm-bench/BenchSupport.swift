@@ -139,6 +139,10 @@ struct Options {
 		}
 	}
 
+	func value(_ key: String) -> String? {
+		values[key]
+	}
+
 	func string(_ key: String, default value: String) -> String {
 		values[key] ?? value
 	}
