@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import OSLog
 import YapKit
 
@@ -85,7 +85,7 @@ final class CallPrompt {
 			watch = Task { [weak self] in
 				let events = await detector.events()
 				for await event in events {
-					self?.send(.call(event))
+					self?.send(.call(Self.debugRemapped(event)))
 				}
 			}
 		} else if !wanted, let detector {
@@ -96,6 +96,19 @@ final class CallPrompt {
 			// Unheard from now on: a call still running later counts as new.
 			if prompter.call != nil { send(.call(.ended)) }
 		}
+	}
+
+	/// `-YapDebugCallApp <executable>` (Debug only): a recorder with this
+	/// name counts as a call app, so verification can fake a call with a CLI
+	/// that holds the mic. Real call apps can't be driven headless.
+	private nonisolated static func debugRemapped(_ event: CallEvent) -> CallEvent {
+		#if DEBUG
+		if case .started(.other(let name)) = event,
+		   name == UserDefaults.standard.string(forKey: "YapDebugCallApp") {
+			return .started(app: .browser(name))
+		}
+		#endif
+		return event
 	}
 
 	private func send(_ input: CallPrompter.Input) {
@@ -144,10 +157,25 @@ final class CallPrompt {
 			}
 		case .startNotes:
 			Logger.notes.notice("Call prompt: clicked, starting notes")
+			#if DEBUG
+			logFocus()
+			#endif
 			if notes.phase == .idle { notes.toggle() }
 		case .stopNotes:
 			Logger.notes.notice("Call prompt: clicked, stopping notes")
+			#if DEBUG
+			logFocus()
+			#endif
 			if notes.isRecording { notes.toggle() }
 		}
 	}
+
+	#if DEBUG
+	/// A click on the prompt must leave focus where it was.
+	private func logFocus() {
+		let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none"
+		let key = overlay.debugPanel?.isKeyWindow ?? false
+		Logger.notes.notice("Call prompt click: key=\(key, privacy: .public) front=\(front, privacy: .public) yapActive=\(NSApp.isActive, privacy: .public)")
+	}
+	#endif
 }
