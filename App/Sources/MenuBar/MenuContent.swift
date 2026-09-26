@@ -94,6 +94,11 @@ struct MenuContent: View {
 
 		Divider()
 
+		Button("About yap") {
+			bringToFront()
+			openWindow(id: WindowID.about)
+		}
+
 		Button("Quit yap") {
 			NSApp.terminate(nil)
 		}
@@ -112,6 +117,8 @@ enum WindowID {
 	static let onboarding = "onboarding"
 	static let liveTranscript = "live-transcript"
 	static let note = "note"
+	static let about = "about"
+	static let acknowledgements = "acknowledgements"
 	#if DEBUG
 	static let tryIt = "try-it"
 	#endif
