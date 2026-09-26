@@ -7,6 +7,7 @@ import Observation
 final class AppModel {
 	let overlay: OverlayController
 	let dictation: DictationController
+	let text = TextSettingsStore()
 	private(set) var isTakingNotes = false
 
 	#if DEBUG
@@ -29,6 +30,7 @@ final class AppModel {
 		startsDictation = startsDictation && !NotesProbe.isRequested
 		NotesProbe.shared.applyLaunchArguments()
 		#endif
+		dictation.processor = text.pipeline
 		if startsDictation {
 			dictation.start()
 		}
