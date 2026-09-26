@@ -4,7 +4,13 @@ import Foundation
 
 struct Paths {
 	let local: URL
-	var models: URL { local.appendingPathComponent("Models", isDirectory: true) }
+	/// `ASR_BENCH_MODELS` points at a copy of the models, e.g. to force a cold ANE compile.
+	var models: URL {
+		if let override = ProcessInfo.processInfo.environment["ASR_BENCH_MODELS"] {
+			return URL(fileURLWithPath: override, isDirectory: true)
+		}
+		return local.appendingPathComponent("Models", isDirectory: true)
+	}
 	var data: URL { local.appendingPathComponent("data", isDirectory: true) }
 	var results: URL { local.appendingPathComponent("results", isDirectory: true) }
 

@@ -3,26 +3,35 @@ import Foundation
 import Synchronization
 
 /// Process memory as the kernel accounts it. `footprint` is what Activity
-/// Monitor shows as "Memory"; `resident` also counts clean file-backed pages
-/// such as memory-mapped model weights.
+/// Monitor shows as "Memory"; `resident` also counts clean file-backed pages.
+/// `neural` is memory the Neural Engine owns on the process's behalf (model
+/// weights on the ANE); it is *not* part of `footprint`.
 struct MemorySnapshot: Sendable {
-	var resident: UInt64
-	var footprint: UInt64
-	var lifetimePeakFootprint: UInt64
+	var resident: UInt64 = 0
+	var footprint: UInt64 = 0
+	var neural: UInt64 = 0
+	var lifetimePeakFootprint: UInt64 = 0
+	var lifetimePeakNeural: UInt64 = 0
 
 	static func now() -> MemorySnapshot {
-		var info = rusage_info_v4()
+		var info = rusage_info_v6()
 		let result = withUnsafeMutablePointer(to: &info) { pointer in
 			pointer.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) {
-				proc_pid_rusage(getpid(), RUSAGE_INFO_V4, $0)
+				proc_pid_rusage(getpid(), RUSAGE_INFO_V6, $0)
 			}
 		}
-		guard result == 0 else { return MemorySnapshot(resident: 0, footprint: 0, lifetimePeakFootprint: 0) }
+		guard result == 0 else { return MemorySnapshot() }
 		return MemorySnapshot(
 			resident: info.ri_resident_size,
 			footprint: info.ri_phys_footprint,
-			lifetimePeakFootprint: info.ri_lifetime_max_phys_footprint
+			neural: info.ri_neural_footprint,
+			lifetimePeakFootprint: info.ri_lifetime_max_phys_footprint,
+			lifetimePeakNeural: info.ri_lifetime_max_neural_footprint
 		)
+	}
+
+	var summary: String {
+		"footprint \(mb(footprint)), resident \(mb(resident)), neural \(mb(neural))"
 	}
 }
 
@@ -33,17 +42,18 @@ func mb(_ bytes: UInt64) -> String {
 /// Polls memory on a background thread so we catch the peak inside a window
 /// (the kernel only keeps a lifetime peak).
 final class PeakMemorySampler: Sendable {
-	private let state = Mutex<(running: Bool, resident: UInt64, footprint: UInt64)>((false, 0, 0))
+	private let state = Mutex<(running: Bool, resident: UInt64, footprint: UInt64, neural: UInt64)>((false, 0, 0, 0))
 
 	func start() {
 		let now = MemorySnapshot.now()
-		state.withLock { $0 = (true, now.resident, now.footprint) }
+		state.withLock { $0 = (true, now.resident, now.footprint, now.neural) }
 		let thread = Thread { [self] in
 			while state.withLock({ $0.running }) {
 				let snapshot = MemorySnapshot.now()
 				state.withLock {
 					$0.resident = max($0.resident, snapshot.resident)
 					$0.footprint = max($0.footprint, snapshot.footprint)
+					$0.neural = max($0.neural, snapshot.neural)
 				}
 				usleep(5_000)
 			}
@@ -51,10 +61,10 @@ final class PeakMemorySampler: Sendable {
 		thread.start()
 	}
 
-	func stop() -> (resident: UInt64, footprint: UInt64) {
+	func stop() -> MemorySnapshot {
 		state.withLock {
 			$0.running = false
-			return ($0.resident, $0.footprint)
+			return MemorySnapshot(resident: $0.resident, footprint: $0.footprint, neural: $0.neural)
 		}
 	}
 }

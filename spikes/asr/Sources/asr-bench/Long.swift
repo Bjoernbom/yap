@@ -45,7 +45,7 @@ func runLong(_ options: Options) async throws {
 	let wholePeak = sampler.stop()
 	let wholeErrors = wordErrors(reference: reference, hypothesis: whole.text, normalized: true)
 	print("")
-	print("(a) whole clip after release: latency \(fmt(wholeLatency * 1000, 0)) ms, WER \(fmt(wholeErrors.rate * 100, 2)) %, peak footprint \(mb(wholePeak.footprint))")
+	print("(a) whole clip after release: latency \(fmt(wholeLatency * 1000, 0)) ms, WER \(fmt(wholeErrors.rate * 100, 2)) %, peak \(wholePeak.summary)")
 	print("  HYP: \(whole.text)")
 
 	let strategies = [

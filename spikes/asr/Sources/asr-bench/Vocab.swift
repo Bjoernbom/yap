@@ -44,11 +44,12 @@ func runVocab(_ options: Options) async throws {
 		let start = ContinuousClock.now
 		let output = await session.rescore(
 			text: result.text, tokenTimings: result.tokenTimings ?? [], audioSamples: clip.samples)
-		rescoreTimes.append(seconds(since: start))
+		let rescoreTime = seconds(since: start)
+		rescoreTimes.append(rescoreTime)
 		let boosted = output?.text ?? result.text
 		baseErrors = baseErrors + wordErrors(reference: clip.reference, hypothesis: result.text, normalized: true)
 		boostedErrors = boostedErrors + wordErrors(reference: clip.reference, hypothesis: boosted, normalized: true)
-		print("\(clip.name)  rescore \(fmt(rescoreTimes.last! * 1000, 0)) ms  detected [\(output?.detectedTerms.joined(separator: ", ") ?? "")]")
+		print("\(clip.name)  rescore \(fmt(rescoreTime * 1000, 0)) ms  detected [\(output?.detectedTerms.joined(separator: ", ") ?? "")]")
 		print("  REF:   \(clip.reference)")
 		print("  BASE:  \(result.text)")
 		if boosted != result.text { print("  BOOST: \(boosted)") }

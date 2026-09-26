@@ -61,32 +61,36 @@ func runDownload(_ options: Options) async throws {
 // MARK: - load
 
 func runLoad(_ options: Options) async throws {
-	let before = MemorySnapshot.now()
-	print("before load: footprint \(mb(before.footprint)), resident \(mb(before.resident))")
-	let sampler = PeakMemorySampler()
-	sampler.start()
-	var (engine, loadTime): (Engine?, Double) = try await Engine.load(options.model)
-	let loadPeak = sampler.stop()
-	let loaded = MemorySnapshot.now()
-	print("load (AsrModels.load + AsrManager): \(fmt(loadTime, 2)) s")
-	print("after load: footprint \(mb(loaded.footprint)), resident \(mb(loaded.resident)), peak during load footprint \(mb(loadPeak.footprint))")
-
 	let clip = try Dataset.load(options.dataset)[0]
-	for attempt in 1...3 {
-		let start = ContinuousClock.now
-		let result = try await engine!.transcribe(clip.samples)
-		print("transcription #\(attempt) (\(fmt(clip.duration, 1)) s audio): \(fmt(seconds(since: start) * 1000, 0)) ms  \(result.text)")
+	print("before load: \(MemorySnapshot.now().summary)")
+
+	// Scoped so the engine (and its MLModels) is released before the last measurement.
+	do {
+		let sampler = PeakMemorySampler()
+		sampler.start()
+		let (engine, loadTime) = try await Engine.load(options.model)
+		let loadPeak = sampler.stop()
+		print("load (AsrModels.load + AsrManager): \(fmt(loadTime, 2)) s")
+		print("after load: \(MemorySnapshot.now().summary); peak during load: \(loadPeak.summary)")
+
+		for attempt in 1...3 {
+			let start = ContinuousClock.now
+			let result = try await engine.transcribe(clip.samples)
+			print("transcription #\(attempt) (\(fmt(clip.duration, 1)) s audio): \(fmt(seconds(since: start) * 1000, 0)) ms  \(result.text)")
+		}
+		try await Task.sleep(for: .seconds(2))
+		print("idle, model loaded: \(MemorySnapshot.now().summary)")
+		if let hold = ProcessInfo.processInfo.environment["ASR_BENCH_HOLD"].flatMap(Int.init) {
+			// Lets `footprint <pid>` inspect the loaded process from outside.
+			print("holding \(hold) s, pid \(getpid())")
+			try await Task.sleep(for: .seconds(hold))
+		}
+		await engine.manager.cleanup()
 	}
 	try await Task.sleep(for: .seconds(2))
-	let idle = MemorySnapshot.now()
-	print("idle, model loaded: footprint \(mb(idle.footprint)), resident \(mb(idle.resident))")
-
-	await engine!.manager.cleanup()
-	engine = nil
-	try await Task.sleep(for: .seconds(2))
 	let unloaded = MemorySnapshot.now()
-	print("after cleanup + release: footprint \(mb(unloaded.footprint)), resident \(mb(unloaded.resident))")
-	print("lifetime peak footprint: \(mb(unloaded.lifetimePeakFootprint))")
+	print("after cleanup + release: \(unloaded.summary)")
+	print("lifetime peak: footprint \(mb(unloaded.lifetimePeakFootprint)), neural \(mb(unloaded.lifetimePeakNeural))")
 }
 
 // MARK: - bench
@@ -139,7 +143,8 @@ func runBench(_ options: Options) async throws {
 	print("  WER raw (case+punct): \(fmt(raw.rate * 100, 2)) %")
 	print("  latency ms: median \(fmt(percentile(latencies, 50) * 1000, 0)), p95 \(fmt(percentile(latencies, 95) * 1000, 0)), max \(fmt((latencies.max() ?? 0) * 1000, 0))")
 	print("  RTFx (total audio / total processing): \(fmt(audio / processing, 1))")
-	print("  memory: peak during transcription footprint \(mb(peak.footprint)) / resident \(mb(peak.resident)); idle footprint \(mb(idle.footprint)) / resident \(mb(idle.resident))")
+	print("  memory peak during transcription: \(peak.summary)")
+	print("  memory idle after run: \(idle.summary)")
 	print("  hypotheses: \(output.path)")
 }
 
