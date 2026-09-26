@@ -29,8 +29,8 @@
 	--screen-line: #d4d5db;
 	--button-bg: #111113;
 	--button-fg: #ffffff;
-	--focus: #3d6b00;
-	--lime: #c8ff3d;
+	--focus: #787060;
+	--bone: #d9d4c7;
 	--notch: #000000;
 	--pixel: "Pixelify Sans", ui-monospace, "SF Mono", Menlo, monospace;
 	--sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -46,9 +46,9 @@
 		--card: #151517;
 		--screen: #1b1c20;
 		--screen-line: #2c2d33;
-		--button-bg: #c8ff3d;
+		--button-bg: #d9d4c7;
 		--button-fg: #000000;
-		--focus: #c8ff3d;
+		--focus: #d9d4c7;
 	}
 }
 
@@ -205,7 +205,7 @@ h1 {
 	display: block;
 	width: 4px;
 	height: 4px;
-	background: linear-gradient(var(--lime) 4px, transparent 4px) 0 0 / 4px 6px repeat-y;
+	background: linear-gradient(var(--bone) 4px, transparent 4px) 0 0 / 4px 6px repeat-y;
 	animation: var(--a, none) 1.3s steps(1, end) var(--d, 0s) infinite;
 }
 .wave i.q { opacity: .4; animation: none; }
@@ -300,7 +300,7 @@ kbd {
 	color: #f5f5f7;
 	border-radius: 16px;
 }
-.privacy h2 { color: var(--lime); }
+.privacy h2 { color: var(--bone); }
 .privacy p { margin: 0; max-width: 40em; color: #c7c7cc; }
 
 /* Install */
@@ -320,14 +320,14 @@ kbd {
 	overflow-wrap: anywhere;
 	white-space: pre-wrap;
 }
-.command code::before { content: "$ "; color: var(--lime); }
+.command code::before { content: "$ "; color: var(--bone); }
 .copy {
 	min-width: 76px;
 	min-height: 40px;
 	padding: 8px 14px;
 	font: 600 14px var(--sans);
 	color: #000;
-	background: var(--lime);
+	background: var(--bone);
 	border: 0;
 	border-radius: 8px;
 	cursor: pointer;
@@ -394,7 +394,7 @@ footer p { margin: 0; }
 
 <main id="main">
 	<div class="wrap hero">
-		<div class="screen" role="img" aria-label="The yap notch opens as you talk and shows a lime pixel waveform, shimmers while it works, shows a tick, and your words appear in the text field.">
+		<div class="screen" role="img" aria-label="The yap notch opens as you talk and shows a bone-white pixel waveform, shimmers while it works, shows a tick, and your words appear in the text field.">
 			<div class="notch" aria-hidden="true">
 				<div class="layer wave"><i class="q"></i><i class="q"></i><i style="--a:wa;--d:-1.31s;--h:2"></i><i style="--a:wc;--d:-0.93s;--h:4"></i><i style="--a:wb;--d:-0.06s;--h:5"></i><i style="--a:wd;--d:-0.11s;--h:2"></i><i style="--a:wd;--d:-0.49s;--h:2"></i><i style="--a:wb;--d:-1.01s;--h:1"></i><i style="--a:wd;--d:-0.28s;--h:3"></i><i style="--a:wa;--d:-0.89s;--h:3"></i><i style="--a:wc;--d:-0.67s;--h:4"></i><i style="--a:wa;--d:-0.31s;--h:5"></i><i style="--a:wb;--d:-0.16s;--h:3"></i><i style="--a:wc;--d:-1.16s;--h:2"></i><i style="--a:wa;--d:-0.99s;--h:3"></i><i style="--a:wd;--d:-1.24s;--h:4"></i><i style="--a:wd;--d:-0.58s;--h:3"></i><i style="--a:wb;--d:-1.12s;--h:3"></i><i style="--a:wa;--d:-0.72s;--h:5"></i><i style="--a:wd;--d:-1.4s;--h:4"></i><i style="--a:wc;--d:-0.97s;--h:2"></i><i style="--a:wa;--d:-0.82s;--h:3"></i><i style="--a:wc;--d:-0.24s;--h:4"></i><i style="--a:wd;--d:-0.06s;--h:2"></i><i style="--a:wc;--d:-0.54s;--h:3"></i><i style="--a:wd;--d:-0.93s;--h:2"></i><i style="--a:wa;--d:-1.34s;--h:2"></i><i style="--a:wd;--d:-1.12s;--h:1"></i><i class="q"></i><i class="q"></i></div>
 				<div class="layer work"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i></div>

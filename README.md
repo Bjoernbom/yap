@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/icon/final-128@2x.png" width="112" height="112" alt="The yap icon: a lime pixel waveform on black">
+  <img src="design/icon/final-128@2x.png" width="112" height="112" alt="The yap icon: a bone-white pixel waveform on black">
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 > fast, and out of the way. — Willie
 
 <p align="center">
-  <img src="design/readme/notch-demo.gif" width="554" alt="The yap notch: a lime pixel waveform while you talk, a grey shimmer while it works, then a white pixel tick">
+  <img src="design/readme/notch-demo.gif" width="554" alt="The yap notch: a bone-white pixel waveform while you talk, a grey shimmer while it works, then a white pixel tick">
 </p>
 
 ## what it does
