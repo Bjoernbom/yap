@@ -17,6 +17,7 @@ struct YapApp: App {
 				.modifier(NotesWindowOpener(notes: model.notes))
 			#if DEBUG
 				.modifier(DebugWindowOpener())
+				.modifier(AboutDebugOpener())
 			#endif
 		}
 		.menuBarExtraStyle(.menu)
@@ -48,6 +49,23 @@ struct YapApp: App {
 			NoteView(notes: model.notes)
 		}
 		.defaultSize(width: 620, height: 680)
+		.defaultLaunchBehavior(.suppressed)
+		.restorationBehavior(.disabled)
+
+		Window("About yap", id: WindowID.about) {
+			AboutView()
+		}
+		.windowStyle(.hiddenTitleBar)
+		.windowResizability(.contentSize)
+		.defaultWindowPlacement { _, _ in WindowPlacement(.center) }
+		.defaultLaunchBehavior(.suppressed)
+		.restorationBehavior(.disabled)
+
+		Window("Acknowledgements", id: WindowID.acknowledgements) {
+			AcknowledgementsView()
+		}
+		.defaultSize(width: 540, height: 620)
+		.defaultWindowPlacement { _, _ in WindowPlacement(.center) }
 		.defaultLaunchBehavior(.suppressed)
 		.restorationBehavior(.disabled)
 
