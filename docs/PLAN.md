@@ -44,11 +44,11 @@ Everything runs on the Mac. No API keys, no accounts, no cloud, no telemetry.
 | ------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Language / UI       | Swift 6, SwiftUI + AppKit (`NSPanel` for the notch, `MenuBarExtra`)   | Lowest latency and memory, native look, no JS bridge                                  |
 | Platform            | macOS 26+, Apple Silicon only                                          | Unlocks Foundation Models + Neural Engine; removes every fallback path                |
-| Speech-to-text      | [FluidAudio](https://github.com/FluidInference/FluidAudio) — Parakeet TDT v3 (Core ML, ANE) | Much faster than Whisper on ANE, punctuation + casing built in, multilingual auto-detect |
+| Speech-to-text      | [FluidAudio](https://github.com/FluidInference/FluidAudio) — Parakeet TDT v3 **Ultra** weights (Core ML, ANE), `traits: []` | 50–170 ms per chunk, punctuation + casing built in, no language hint needed. sv 14.4 % / en 5.4 % WER on FLEURS |
 | Extra languages     | [WhisperKit](https://github.com/argmaxinc/WhisperKit) large-v3-turbo, optional download | Covers Norwegian, Japanese, Chinese, Korean that Parakeet v3 lacks                     |
 | VAD + diarization   | FluidAudio (Silero VAD, speaker diarization on Core ML)                | Same SDK, same runtime, on the ANE                                                     |
-| Polish + summaries  | Apple Foundation Models (`LanguageModelSession`, `@Generable`)         | On-device, free, zero download, structured output for action items                    |
-| Mic capture         | `AVAudioEngine` with voice processing (echo cancellation)             | AEC keeps speaker bleed out of "you" in meetings                                       |
+| Polish + summaries  | Apple Foundation Models (`LanguageModelSession`, `@Generable`)         | On-device, free, zero download, structured output. Needs Apple Intelligence on; yap works fully without it |
+| Mic capture         | `AVAudioEngine`, raw input (no voice processing), engine prepared ahead | ~46 ms to first sample when prepared. Voice processing ducks all other audio ~30 dB and ignores device pinning |
 | System audio        | Core Audio process taps (`CATapDescription`)                           | Captures call audio without a virtual driver or Screen Recording permission           |
 | Hotkey              | Own `CGEventTap` state machine                                         | Needed for modifier-only push-to-talk (Fn, right ⌥) and double-tap lock               |
 | Text insertion      | AX `kAXSelectedTextAttribute` → fallback `CGEvent` ⌘V + clipboard restore | Native fields get text directly; everything else still works; clipboard survives   |
@@ -78,7 +78,7 @@ yap.app
 
 ```
 key down ─▶ mic on ─▶ 16 kHz ring buffer ─▶ VAD cuts at pauses ─▶ Parakeet per chunk (while talking)
-key up   ─▶ flush last chunk ─▶ join ─▶ cleanup + dictionary ─▶ polish (optional, 1.5 s timeout)
+key up   ─▶ flush last chunk ─▶ join ─▶ cleanup + dictionary ─▶ polish (opt-in, 1.0 s timeout)
          ─▶ save to history ─▶ insert into focused app ─▶ restore clipboard
 ```
 
@@ -144,7 +144,7 @@ Plus a **Health** row: every permission and the model, green or with a fix butto
 | Key up → text inserted, no polish (p95)          | < 300 ms          |
 | Key up → text inserted, with polish (p95)        | < 1.2 s           |
 | Idle CPU                                         | ~0 %              |
-| Idle memory, model warm                          | measure in M0, then set a ceiling |
+| Idle memory, model warm                          | ≤ 120 MB footprint + ≤ 650 MB Neural Engine (`ri_neural_footprint`) |
 | App download (without models)                    | < 15 MB           |
 | Word error rate, sv + en fixtures                | ≤ 0.4 (whisper medium), never regresses |
 | 60-min meeting → finished note after stop        | < 60 s            |
@@ -265,10 +265,47 @@ Good ideas for later — not now.
 4. Whisper for Norwegian/Japanese/Chinese/Korean — optional download, built
    after M3 so it never slows down the core.
 
-## 12. Assumptions to verify in M0
+## 12. M0 results
 
-- Parakeet TDT v3 quality on Swedish, and on Swedish/English code-switching.
-- Foundation Models availability and quality for Swedish polish and summaries.
-- FluidAudio custom-vocabulary support (else the dictionary is post-processing only).
-- Voice-processing AEC doesn't degrade dictation quality (use it for notes only if it does).
-- Fn/Globe capture via `CGEventTap` flagsChanged across keyboards.
+Full findings: [`docs/spikes/asr.md`](spikes/asr.md), [`llm.md`](spikes/llm.md),
+[`io.md`](spikes/io.md). What changed in the plan because of them:
+
+- **Speech:** Parakeet Ultra, go. Transcribe while talking: Silero VAD cuts at
+  pauses (min silence 0.5 s, hard cap 14 s), chunks are transcribed serially,
+  key-up only waits for the tail: 35–55 ms for a 2-minute dictation, and more
+  accurate than one long pass. Warm the ANE on key-down (it naps after ~1 min).
+  Presses under 0.3 s never reach the engine. Model: 603 MB download, 17–21 s
+  one-time compile during onboarding, 0.4 s load after that.
+- **Dictionary:** post-processing (replacements + fuzzy match). Parakeet has no
+  native biasing; FluidAudio's CTC rescoring helps but also breaks words, so it
+  stays behind a flag. Parakeet writes "yap" as "yapp" — first dictionary entry.
+- **Polish:** opt-in, not default, until it passes the corpus in
+  `spikes/llm` with Apple Intelligence on. 1.0 s timeout. Skip the model for
+  empty, filler-only, very short or very long input, and for languages the
+  model doesn't support (Finnish, Polish, Czech, Greek).
+- **Summaries:** map-reduce over ~6,000-character sections, summarized live
+  during the meeting so only the last section and the merge remain after stop.
+  Apple Intelligence was off on the first test Mac, so plan for many users
+  without it: notes always give the full transcript; summaries need Apple
+  Intelligence (with a one-line hint to enable it). A local MLX fallback model
+  is evaluated in M3, not before.
+- **Mic:** raw input for dictation, never voice processing. Prepare the engine
+  ahead of time. Pin to the built-in mic when the default input is Bluetooth.
+  Echo handling for notes is decided in M3 after a real call.
+- **Hotkey:** active `CGEventTap` (needs Accessibility; can swallow Esc).
+  Re-enable the tap on timeout. Include `keyUp` in the mask.
+- **Insertion:** AX first, verified by reading the value back; paste fallback
+  through a pasteboard data provider (restore ~50 ms after the target reads it,
+  500 ms timeout), marked transient. **Record the focused pid at key-down and
+  refuse to insert if focus moved to another app** — text goes to Paste last
+  instead. Map ⌘V through the keyboard layout.
+- **System audio:** works from the app bundle only; missing permission looks
+  like silence, and silence produces no callbacks — the notes timeline runs on
+  host time.
+- **Call detection:** works without any permission.
+- **Permissions:** Microphone + Accessibility in onboarding; System Audio
+  Recording at the first notes start. Input Monitoring probably not needed —
+  confirm with the real app in M1.
+- **Still open:** real spontaneous Swedish dictation fixtures, M1/base-chip
+  latency, Fn on external keyboards, whether ANE compile cache survives OS
+  updates, ANE contention in notes.
