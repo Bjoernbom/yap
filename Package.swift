@@ -36,5 +36,8 @@ let package = Package(
 		.executableTarget(name: "yap-harness-session", dependencies: ["YapKit"]),
 		// Dev-only runtime check for Input/Output in the harness's own windows. Not a product.
 		.executableTarget(name: "yap-harness-io", dependencies: ["YapKit"]),
+		// Dev harness: CallDetector with a child recorder, and SystemAudioTap
+		// plumbing (a bare CLI captures zeros; the real check is the Debug app).
+		.executableTarget(name: "yap-harness-notes", dependencies: ["YapKit"]),
 	]
 )
