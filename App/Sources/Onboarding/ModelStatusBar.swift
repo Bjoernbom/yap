@@ -12,19 +12,27 @@ struct ModelStatusBar: View {
 	var body: some View {
 		VStack(alignment: .leading, spacing: 6) {
 			HStack(spacing: 6) {
-				label
-				Spacer(minLength: 8)
-				trailing
+				HStack(spacing: 6) {
+					label
+					Spacer(minLength: 8)
+					percentage
+				}
+				// One VoiceOver stop for the status; the retry stays its own button.
+				.accessibilityElement(children: .ignore)
+				.accessibilityLabel("Speech model")
+				.accessibilityValue(accessibilityValue)
+				if case .failed = dictation.modelStatus {
+					Button("Try again") { dictation.retryModel() }
+						.controlSize(.small)
+				}
 			}
 			.font(.caption)
 			.foregroundStyle(.secondary)
 			if let fraction = barFraction {
 				Bar(fraction: fraction)
+					.accessibilityHidden(true)
 			}
 		}
-		.accessibilityElement(children: .combine)
-		.accessibilityLabel("Speech model")
-		.accessibilityValue(accessibilityValue)
 		.animation(.easeOut(duration: 0.25), value: dictation.modelStatus)
 	}
 
@@ -47,26 +55,24 @@ struct ModelStatusBar: View {
 			Label("Speech model ready", systemImage: "checkmark")
 				.labelStyle(.titleAndIcon)
 		case .failed:
-			Text(dictation.modelFailedOffline
-				? "You're offline. The speech model needs one download."
-				: "Couldn't get the speech model.")
+			Text(failureLine)
 		}
 	}
 
 	@ViewBuilder
-	private var trailing: some View {
-		switch dictation.modelStatus {
-		case .loading(let fraction?):
+	private var percentage: some View {
+		if case .loading(let fraction?) = dictation.modelStatus {
 			Text("\(Self.percent(fraction))%")
 				.font(BrandFont.pixel(16))
 				.monospacedDigit()
 				.foregroundStyle(.primary)
-		case .failed:
-			Button("Try again") { dictation.retryModel() }
-				.controlSize(.small)
-		case .loading(nil), .ready:
-			EmptyView()
 		}
+	}
+
+	private var failureLine: String {
+		dictation.modelFailedOffline
+			? "You're offline. The speech model needs one download."
+			: "Couldn't get the speech model."
 	}
 
 	private var accessibilityValue: String {
@@ -74,7 +80,7 @@ struct ModelStatusBar: View {
 		case .loading(let fraction?): "Downloading, \(Self.percent(fraction)) percent"
 		case .loading(nil): "Warming up"
 		case .ready: "Ready"
-		case .failed: dictation.modelFailedOffline ? "Offline" : "Failed"
+		case .failed: failureLine
 		}
 	}
 
