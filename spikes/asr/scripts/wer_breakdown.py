@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Re-scores an asr-bench hypotheses TSV (name, duration, latency, ref, hyp).
 
-Prints corpus WER for the first N clips (to compare with the long-clip run)
-and WER over clips whose reference and hypothesis contain no digits (to see
+Prints corpus WER for clips [start, end) (to compare with a long-clip run,
+which concatenates the same clips) and WER over clips whose reference and hypothesis contain no digits (to see
 how much of the error is numerals written as words vs digits).
 """
 
@@ -31,10 +31,10 @@ def wer(rows):
 
 
 path = sys.argv[1]
-first = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 rows = [line.rstrip("\n").split("\t")[3:5] for line in open(path, encoding="utf-8")]
 print("all clips:        %.2f %% (%d/%d)" % wer(rows))
-if first:
-	print("first %d clips:   %.2f %% (%d/%d)" % ((first,) + wer(rows[:first])))
+if len(sys.argv) > 3:
+	start, end = int(sys.argv[2]), int(sys.argv[3])
+	print("clips %d..%d:     %.2f %% (%d/%d)" % ((start, end - 1) + wer(rows[start:end])))
 no_digits = [(r, h) for r, h in rows if not any(c.isdigit() for c in r + h)]
 print("no-digit clips:   %.2f %% (%d/%d), %d of %d clips" % (wer(no_digits) + (len(no_digits), len(rows))))
