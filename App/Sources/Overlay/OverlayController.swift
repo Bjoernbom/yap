@@ -44,6 +44,12 @@ final class OverlayController {
 
 	var state: OverlayState { model.state }
 
+	/// Called when the user clicks the notch while it shows a meeting.
+	var onMeetingClick: (() -> Void)? {
+		get { model.onMeetingClick }
+		set { model.onMeetingClick = newValue }
+	}
+
 	func show(_ state: OverlayState) {
 		dismissTask?.cancel()
 		guard state != .hidden else {
@@ -68,6 +74,10 @@ final class OverlayController {
 		withAnimation(Self.grow) {
 			model.state = state
 		}
+		// Only the meeting notch is clickable (it opens the live
+		// transcript); otherwise clicks go straight through to the menu bar.
+		// Transparent pixels pass clicks through either way.
+		panel.ignoresMouseEvents = state.content != .meeting
 
 		switch state {
 		case .done: scheduleDismiss(of: state, after: Self.doneHold)
@@ -170,7 +180,7 @@ final class OverlayController {
 	private func makePanel() -> NotchPanel {
 		let layout = OverlayLayout(geometry: model.geometry)
 		let panel = NotchPanel(contentRect: layout.panelFrame)
-		let host = NSHostingView(rootView: OverlayView(model: model))
+		let host = ClickThroughHostingView(rootView: OverlayView(model: model))
 		host.sizingOptions = []
 		host.safeAreaRegions = []
 		panel.contentView = host
@@ -202,6 +212,12 @@ final class OverlayController {
 			?? NSScreen.main
 			?? NSScreen.screens[0]
 	}
+}
+
+/// The panel never becomes key, so without this the first click would only
+/// be spent on activating it and the tap would never fire.
+private final class ClickThroughHostingView: NSHostingView<OverlayView> {
+	override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 extension Logger {
