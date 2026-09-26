@@ -1,6 +1,6 @@
 // Posts one synthetic key event for yap verification, but only when the
 // frontmost app and its focused window are the ones we expect (our own test
-// window). Usage: yapkey <bundle-id> <window-title-substring> <action>
+// window). Usage: yapkey <bundle-id or pid:N> <window-title-substring> <action>
 // actions: fn-down fn-up ropt-down ropt-up esc pastelast (⌃⌘V)
 // Exit 0 posted, 3 focus check failed (a release is still posted so yap
 // never stays stuck listening; yap itself refuses to type into another app).
@@ -32,6 +32,8 @@ func frontInfo() -> (String, String) {
 		AXUIElementGetPid(focused as! AXUIElement, &focusedPID)
 	}
 	if focusedPID != 0 && focusedPID != app.processIdentifier { return ("mismatch-\(focusedPID)", title) }
+	// "pid:<n>" tells two copies of one app apart (a test build next to the user's yap).
+	if expectBundle.hasPrefix("pid:") { return ("pid:\(app.processIdentifier)", title) }
 	return (app.bundleIdentifier ?? "none", title)
 }
 
