@@ -26,6 +26,9 @@ final class CallPrompt {
 	private var watch: Task<Void, Never>?
 	private var timer: Task<Void, Never>?
 	private var defaultsObserver: NSObjectProtocol?
+	#if DEBUG
+	private var debugObservers: [NSObjectProtocol] = []
+	#endif
 	private let clock = ContinuousClock()
 	private let origin: ContinuousClock.Instant
 
@@ -63,7 +66,33 @@ final class CallPrompt {
 			MainActor.assumeIsolated { self?.settingMayHaveChanged() }
 		}
 		updateDetector()
+		#if DEBUG
+		observeFakeCalls()
+		#endif
 	}
+
+	#if DEBUG
+	/// `com.bjornbom.yap.debug.call.started.<pid>` / `.ended.<pid>` feed a
+	/// call event straight to the prompter, skipping Core Audio (and the
+	/// detector's 3 s minimum), for when no recorder can hold the mic.
+	private func observeFakeCalls() {
+		let center = DistributedNotificationCenter.default()
+		let events: [(String, CallEvent)] = [
+			("started", .started(app: .browser("fake call"))),
+			("ended", .ended),
+		]
+		for (name, event) in events {
+			debugObservers.append(center.addObserver(
+				forName: Notification.Name("com.bjornbom.yap.debug.call.\(name).\(getpid())"), object: nil, queue: .main
+			) { [weak self] _ in
+				MainActor.assumeIsolated {
+					Logger.notes.notice("Fake call \(name, privacy: .public)")
+					self?.send(.call(event))
+				}
+			})
+		}
+	}
+	#endif
 
 	// MARK: - Inputs
 
