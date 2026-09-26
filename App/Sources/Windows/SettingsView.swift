@@ -2,10 +2,12 @@ import AppKit
 import SwiftUI
 import YapKit
 
-/// Settings, M1 cut: the push-to-talk key. The full one-screen settings
-/// with Health arrive in M4.
+/// Settings: the push-to-talk key, polish, styles per app and the
+/// dictionary. The rest of the one-screen settings (Health, mic, notes)
+/// arrive in M4.
 struct SettingsView: View {
 	let dictation: DictationController
+	let text: TextSettingsStore
 
 	/// Read when the window appears; the user may have changed it in System
 	/// Settings meanwhile.
@@ -26,6 +28,10 @@ struct SettingsView: View {
 					.foregroundStyle(.secondary)
 			}
 
+			PolishSection(text: text)
+			StylesSection(text: text, history: dictation.history, historyRevision: dictation.historyRevision)
+			DictionarySection(text: text)
+
 			Section {
 				LabeledContent("Paste last", value: "⌃⌘V")
 			}
@@ -37,9 +43,13 @@ struct SettingsView: View {
 		.formStyle(.grouped)
 		.frame(width: 460)
 		.fixedSize(horizontal: false, vertical: true)
-		.onAppear { fnUsage = FnKeyUsage.current }
+		.onAppear {
+			fnUsage = FnKeyUsage.current
+			text.refreshAvailability()
+		}
 		.onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
 			fnUsage = FnKeyUsage.current
+			text.refreshAvailability()
 		}
 	}
 

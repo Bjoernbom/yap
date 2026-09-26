@@ -16,6 +16,12 @@ let usage = """
 	      --cancel-after <s>      cancel after this much audio (probe)
 	      --finish-twice          call finish() twice (probe)
 	  memory                      idle footprint + Neural Engine memory with the model warm
+	  text "<transcript>"         run the text pipeline: cleanup, dictionary, polish, style
+	      --app <bundle-id>       the focused app, which picks the style
+	      --style <name>          natural|casual|proper|dev, instead of the app's
+	      --all-styles            one run per style
+	      --polish                turn polish on (needs Apple Intelligence)
+	      --dictionary <json>     dictionary entries: [{"id","spoken","written"}]
 
 	  --model ultra|v3            default ultra
 	  --json                      machine-readable output on stdout
@@ -28,6 +34,7 @@ do {
 	case "transcribe": try await runTranscribe(options)
 	case "stream": try await runStream(options)
 	case "memory": try await runMemory(options)
+	case "text": try await runText(options)
 	default: throw BenchError.usage(nil)
 	}
 } catch BenchError.usage(let message) {

@@ -47,6 +47,8 @@ final class DictationController {
 	@ObservationIgnored private let mic = MicCapture()
 	@ObservationIgnored private let engine = ParakeetEngine()
 	@ObservationIgnored private var session: DictationSession?
+	/// Cleanup, dictionary and polish; set by AppModel before `start()`.
+	@ObservationIgnored var processor: any TextProcessing = NoTextProcessing()
 	@ObservationIgnored private var micPrepared = false
 	@ObservationIgnored private var preparing: Task<Void, Never>?
 	@ObservationIgnored private var permissionPoll: Task<Void, Never>?
@@ -253,7 +255,7 @@ final class DictationController {
 			audio: mic,
 			engine: engine,
 			transcription: StreamingTranscriber(engine: engine, vad: vad),
-			processor: NoTextProcessing(),
+			processor: processor,
 			inserter: Inserter(),
 			history: history
 		)
@@ -287,6 +289,10 @@ final class DictationController {
 			guard let session else { return }
 			forwarding = true
 			keyDownAt = .now
+			// Lets polish prewarm its model while the user talks.
+			let app = NSWorkspace.shared.frontmostApplication
+			let processor = self.processor
+			Task { await processor.prepare(for: app.map { FocusTarget(pid: $0.processIdentifier, bundleID: $0.bundleIdentifier) }) }
 			await session.handle(.start)
 		case .stop, .cancel, .lock:
 			guard forwarding, let session else { return }
