@@ -165,9 +165,9 @@ should read like it was made by one sharp person who cares — because it was.
   waveform made of chunky pixel bars. It's the brand and the feedback in one.
 - **Pixel font only for brand moments:** the wordmark, the notch timer, and
   big numbers. All functional UI uses SF Pro, so it feels native and reads fast.
-- **Colour:** black and white, plus one accent. Proposal: *signal lime*
-  (`#C8FF3D`) for "listening", red strictly for "recording a meeting".
-  Nothing else gets colour.
+- **Colour:** black and white, plus one quiet accent: *bone* (`#D9D4C7`) for
+  "listening", red ("blood") strictly for "recording a meeting". Nothing else
+  gets colour. Tokens and rules live in `design/SYSTEM.md`.
 - **Motion:** the notch grows out of the hardware notch (spring, ~200 ms) and
   shrinks back. A soft tick sound on start/stop (can be turned off).
 - **Icon:** refresh the pixel icon for the macOS 26 layered icon style.
@@ -260,8 +260,8 @@ Good ideas for later — not now.
 1. Native Swift, macOS 26+, Apple Silicon only — **yes**.
 2. Paid Apple Developer Program — **no**; see section 8. Revisit if first-launch
    friction turns out to hurt adoption.
-3. Accent colour and tagline — lime + "talk. it types." as working default;
-   final call in M5.
+3. Accent colour and tagline — bone (`#D9D4C7`) + "talk. it types." Lime was
+   the working default until the brand pass: too loud for a calm tool.
 4. Whisper for Norwegian/Japanese/Chinese/Korean — optional download, built
    after M3 so it never slows down the core.
 
