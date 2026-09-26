@@ -20,14 +20,23 @@ struct YapApp: App {
 		.menuBarExtraStyle(.menu)
 
 		Window("History", id: WindowID.history) {
-			HistoryView()
+			HistoryView(dictation: model.dictation)
 		}
 		.defaultSize(width: 640, height: 480)
 		.defaultLaunchBehavior(.suppressed)
 		.restorationBehavior(.disabled)
 
+		#if DEBUG
+		Window("Try it", id: WindowID.tryIt) {
+			TryItView()
+		}
+		.defaultSize(width: 420, height: 240)
+		.defaultLaunchBehavior(.suppressed)
+		.restorationBehavior(.disabled)
+		#endif
+
 		Settings {
-			SettingsView()
+			SettingsView(dictation: model.dictation)
 		}
 	}
 }
