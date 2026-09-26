@@ -26,8 +26,14 @@ struct PixelWaveform: View {
 		0.88, 0.74, 1, 0.84, 0.96, 0.7, 0.9, 1, 0.76, 0.92, 0.84,
 	]
 
+	/// Levels arrive at ~30 Hz, so listening redraws at that rate; the
+	/// shimmer needs 60 to glide. ProMotion would otherwise run at 120.
+	private var frameInterval: TimeInterval {
+		phase == .listening ? 1.0 / 30 : 1.0 / 60
+	}
+
 	var body: some View {
-		TimelineView(.animation) { timeline in
+		TimelineView(.animation(minimumInterval: frameInterval)) { timeline in
 			// Copy out on the main actor; the canvas only sees plain values.
 			let history = levels.history
 			let date = timeline.date
