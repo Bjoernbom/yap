@@ -3,6 +3,8 @@ import SwiftUI
 /// "Done": a pixel tick that draws itself on, one pixel at a time.
 struct PixelTick: View {
 	let since: Date
+	/// White in the notch; onboarding draws it in lime on the window.
+	var color: Color = Palette.ink
 
 	/// A two-pixel stroke in drawing order: down the short arm, up the long one.
 	private static let pixels: [(column: Int, row: Int)] = [
@@ -25,7 +27,7 @@ struct PixelTick: View {
 				for (index, pixel) in Self.pixels.enumerated() {
 					let appear = (elapsed - Double(index) * Self.stepDuration) / Self.stepDuration
 					guard appear > 0 else { break }
-					context.fillPixel(column: pixel.column, row: pixel.row, with: Palette.ink.opacity(min(appear, 1)))
+					context.fillPixel(column: pixel.column, row: pixel.row, with: color.opacity(min(appear, 1)))
 				}
 			}
 		}

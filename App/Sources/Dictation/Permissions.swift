@@ -5,8 +5,8 @@ import YapKit
 
 /// Microphone and Accessibility, the two permissions dictation needs.
 ///
-/// Minimal first-run gate until onboarding (M4): the menu shows what's
-/// missing and one item that asks for both.
+/// Onboarding asks for each on its own row; after that the menu shows
+/// what's missing and one item that asks for both.
 @MainActor
 @Observable
 final class Permissions {
@@ -15,7 +15,22 @@ final class Permissions {
 
 	init() {
 		microphone = AVCaptureDevice.authorizationStatus(for: .audio)
-		accessibility = AccessibilityPermission.isGranted
+		accessibility = Self.accessibilityGranted
+	}
+
+	#if DEBUG
+	/// `-YapSimulateNoAccessibility YES` reports Accessibility as off, so
+	/// onboarding and the menu can be checked without revoking the real
+	/// grant. Posting `com.bjornbom.yap.debug.grantAccessibility.<pid>`
+	/// flips it back on, like the user turning the switch.
+	static var simulatesNoAccessibility = UserDefaults.standard.bool(forKey: "YapSimulateNoAccessibility")
+	#endif
+
+	private static var accessibilityGranted: Bool {
+		#if DEBUG
+		if simulatesNoAccessibility { return false }
+		#endif
+		return AccessibilityPermission.isGranted
 	}
 
 	var hasMicrophone: Bool { microphone == .authorized }
@@ -34,7 +49,7 @@ final class Permissions {
 	/// Re-reads both. Cheap; called on activation and while something is missing.
 	func refresh() {
 		let microphone = AVCaptureDevice.authorizationStatus(for: .audio)
-		let accessibility = AccessibilityPermission.isGranted
+		let accessibility = Self.accessibilityGranted
 		// Only assign on change, so observers don't re-render every poll.
 		if microphone != self.microphone { self.microphone = microphone }
 		if accessibility != self.accessibility { self.accessibility = accessibility }
@@ -43,6 +58,15 @@ final class Permissions {
 	/// Asks for whatever is missing: the system Microphone prompt (or its
 	/// Settings pane once denied), then the Accessibility prompt and pane.
 	func request() async {
+		await requestMicrophone()
+		if !Self.accessibilityGranted {
+			requestAccessibility()
+		}
+		refresh()
+	}
+
+	/// The system Microphone prompt, or its Settings pane once denied.
+	func requestMicrophone() async {
 		switch AVCaptureDevice.authorizationStatus(for: .audio) {
 		case .notDetermined:
 			_ = await AVCaptureDevice.requestAccess(for: .audio)
@@ -53,16 +77,22 @@ final class Permissions {
 			break
 		}
 		refresh()
+	}
 
-		if !AccessibilityPermission.isGranted {
-			AccessibilityPermission.request()
-			// The prompt only appears once per app identity; the pane always works.
-			Self.openPrivacyPane("Privacy_Accessibility")
-		}
+	/// The Accessibility prompt and its Settings pane.
+	func requestAccessibility() {
+		#if DEBUG
+		// Simulating: the real grant is on, and the system pane would open on
+		// the screen of whoever is running the probe.
+		if Self.simulatesNoAccessibility { return }
+		#endif
+		AccessibilityPermission.request()
+		// The prompt only appears once per app identity; the pane always works.
+		Self.openPrivacyPane("Privacy_Accessibility")
 		refresh()
 	}
 
-	private static func openPrivacyPane(_ anchor: String) {
+	static func openPrivacyPane(_ anchor: String) {
 		guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") else { return }
 		NSWorkspace.shared.open(url)
 	}

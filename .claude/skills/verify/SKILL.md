@@ -147,7 +147,7 @@ sleep 1.5; $T/axdoc com.apple.TextEdit yap-verify-doc text
 - Probes: Esc between fn-down and fn-up (nothing inserted); a 0.1 s tap
   (nothing, and no `listening` capture; `yapkey` sleeps 150 ms after each
   event, so post down and up from one process for a tap this short);
-  password field in Try it (`secureField`, text on the clipboard); `-YapModelDelay 15` then press ("Getting ready…");
+  password field in Try it (`secureField`, text on the clipboard); `-YapModelDelay 15` then press ("Almost ready… 40%", a fake download then compile);
   focus moved: after fn-down, `notify com.bjornbom.yap.debug.tryIt` plus
   `open build/.../yap.app` (macOS refuses self-activation from the
   background) and release with `yapkey com.bjornbom.yap "Try it" fn-up`:
