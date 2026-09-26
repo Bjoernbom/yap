@@ -103,7 +103,7 @@ final class DictationController {
 		) { [weak self] _ in
 			MainActor.assumeIsolated { self?.checkPermissions() }
 		}
-		pasteLastKey = GlobalHotKey(keyCode: kVK_ANSI_V, modifiers: controlKey | cmdKey) { [weak self] in
+		pasteLastKey = GlobalHotKey(id: 1, keyCode: kVK_ANSI_V, modifiers: controlKey | cmdKey) { [weak self] in
 			self?.pasteLast()
 		}
 		Task { [history] in
