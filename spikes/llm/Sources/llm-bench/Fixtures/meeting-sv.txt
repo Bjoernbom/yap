@@ -1,0 +1,207 @@
+[00:00:04] you: Okej, eh, ska vi köra? Är alla med? Johan, hör du oss?
+[00:00:11] speaker 2: Ja, jag hör er. Vänta, jag ska bara... sådär. Nu har jag stängt av Slack i alla fall.
+[00:00:20] speaker 1: Haha, modigt.
+[00:00:23] you: Bra. Eh, innan vi börjar, Amira, var det du som hade med dig bullar? Det luktar kanel i hela kontoret.
+[00:00:33] speaker 3: Ja, alltså, det var min sambo som bakade i helgen och det blev liksom alldeles för många. Så ta, ta så många ni vill, de ligger i köket bredvid kaffemaskinen.
+[00:00:48] speaker 1: Åh, tack. Men det är ju kanelbullens dag på söndag, har ni inte börjat lite för tidigt?
+[00:00:56] speaker 3: Man kan inte börja för tidigt med kanelbullar. Det är min, eh, min livsfilosofi.
+[00:01:03] speaker 2: Det är sant. Men jag sitter ju hemma, så jag får typ titta på er när ni äter. Det är lite grymt faktiskt.
+[00:01:14] you: Vi sparar en åt dig till torsdag. Om den överlever. Eh, hur var helgen förresten? Sara, du skulle till fjällen, va?
+[00:01:25] speaker 1: Ja, vi var i Åre. Eller, vi skulle vandra, men det regnade liksom hela lördagen, så vi satt mest i stugan och spelade Alfapet. Men på söndagen sprack det upp och vi gick upp på Åreskutan, och det var helt, helt klart. Man såg typ ända bort till Norge.
+[00:01:49] you: Nice.
+[00:01:51] speaker 2: Alfapet är ju inte fel heller.
+[00:01:55] speaker 1: Nej, fast jag förlorade varenda gång. Min bror fuskar, jag är helt övertygad om det.
+[00:02:03] speaker 3: Hur fuskar man i Alfapet?
+[00:02:07] speaker 1: Han hittar på ord. Och sen säger han att det är jämtska.
+[00:02:14] speaker 2: Haha, det är ju smart.
+[00:02:18] you: Haha. Okej. Eh, ska vi, ska vi börja? Vi har ganska mycket idag. Jag tänkte att vi tar sprinten först, sen den där kraschen på Android, och sen måste vi faktiskt bestämma oss om releasen av Slant 3.2. Och sen pris för Slant Plus, lite supportgrejer från Amira, och till sist designerrekryteringen. Låter det okej?
+[00:02:40] speaker 3: Ja.
+[00:02:43] speaker 2: Kör.
+[00:02:46] you: Sara, vill du börja med sprinten?
+[00:02:50] speaker 1: Ja. Eh, så vi är ju på dag åtta av tio nu. Och av, vänta, jag ska bara dela skärmen... ser ni den nu?
+[00:03:01] you: Ja, nu syns den.
+[00:03:04] speaker 1: Bra. Så av tjugotre stories har vi sjutton klara, fyra i review och två i progress. Och de två är darkmode-fixen för diagrammen och en textändring i inställningarna, och båda är i princip klara, de ska bara testas.
+[00:03:24] speaker 2: Darkmode-grejen var ju bara att staplarna blev svarta på svart. Den var inte så farlig.
+[00:03:32] speaker 1: Nej. Så det ser, alltså, det ser faktiskt bra ut. Det enda som sticker ut är den nya onboardingen, den har legat i review sen i torsdags.
+[00:03:45] speaker 2: Ja, det är min PR. Den är, eh, den är ganska stor, jag vet. Förlåt. Det blev typ fyrtio filer.
+[00:03:56] you: Fyrtio?
+[00:03:59] speaker 2: Ja, alltså, mycket är översättningsfiler och bilder. Själva logiken är inte så mycket. Det är mest nya skärmar.
+[00:04:09] speaker 1: Jag tittade på den i morse faktiskt, och jag godkände den precis innan mötet. Så den kan mergas.
+[00:04:20] speaker 2: Åh, tack. Det hade jag inte sett.
+[00:04:24] you: Och iOS då? Hur ser det ut där?
+[00:04:29] speaker 1: iOS ser bra ut. Inga kraschar i betan som sticker ut. Det är några små layoutbuggar på iPhone SE, men inget allvarligt. Den gamla lilla SE:n alltså, med den pyttelilla skärmen.
+[00:04:44] speaker 2: Den är ju också typ en gammal telefon. Gamla telefoner verkar vara temat idag.
+[00:04:51] you: Haha, ja. Och onboardingen, hur känns den? Är den redo att gå ut till alla, eller?
+[00:04:59] speaker 2: Eh, alltså, den funkar. Men jag är lite nervös för bankkopplingssteget, för det beror ju på Tink och deras sandbox beter sig inte riktigt som produktion. Så jag skulle vilja, eh, att vi inte släpper den till alla direkt.
+[00:05:20] speaker 3: Vi fick ju massa klagomål sist vi ändrade i det flödet också. Folk fastnade på BankID-steget och trodde att appen hade hängt sig.
+[00:05:31] speaker 2: Precis. Det vill jag inte göra om.
+[00:05:36] you: Okej, så feature flag?
+[00:05:39] speaker 2: Ja. Vi har ju redan flaggsystemet uppe, så det är ingen grej att lägga den bakom en flagga.
+[00:05:49] speaker 1: Hur många procent tänker du?
+[00:05:52] speaker 2: Kanske tjugo procent först? Och sen, om konverteringen ser okej ut efter en vecka, så skruvar vi upp. Femtio, sen alla.
+[00:06:04] speaker 3: Varför inte tio?
+[00:06:07] speaker 2: Tio blir för lite data, tror jag. Vi får typ, eh, trehundra nya användare i veckan. Tio procent av det är ingenting.
+[00:06:18] speaker 3: Okej, fair.
+[00:06:21] you: Tjugo låter bra. Då kör vi så, onboardingen går ut bakom feature flag till tjugo procent av nya användare först.
+[00:06:31] speaker 2: Och jag sätter upp flaggan i konfigurationen när PR:en är mergad. Det gör jag i dag eller i morgon.
+[00:06:43] you: Perfekt. Något mer på sprinten?
+[00:06:47] speaker 1: Nej, inte egentligen. Burndown ser okej ut. Vi har lite luft till och med.
+[00:06:54] you: Skönt. Okej, då, eh, kraschen. Johan, vad vet vi?
+[00:07:00] speaker 2: Ja. Så. Eh, sen vi släppte betan av 3.2 i förra veckan har vi fått, alltså, ganska många kraschrapporter från Android. Och när jag tittade i Crashlytics så är det nästan bara äldre telefoner. Android 8 och 9 mest, och några på Android 7. Mycket Samsung, typ Galaxy A5 och J-serien, såna där billiga.
+[00:07:25] speaker 1: Hur många användare pratar vi om?
+[00:07:29] speaker 2: I betan är det typ tre procent av sessionerna som kraschar på de telefonerna. Men betan är ju bara, vad, fyrahundra personer. Om man räknar på hela basen så har vi ungefär elva procent av Android-användarna på Android 9 eller äldre.
+[00:07:51] you: Elva procent är inte lite.
+[00:07:54] speaker 2: Nej. Och kraschen händer när man öppnar den nya budgetgrafen. Det ser ut som att, eh, vi får slut på minne när vi renderar alla transaktionerna på en gång. De gamla telefonerna har ju typ två gig RAM, och om man har tre års transaktionshistorik så, ja.
+[00:08:16] speaker 3: Är det därför folk skriver att appen "bara stängs"? Vi har fått sådana ärenden hela veckan. Typ femton stycken.
+[00:08:26] speaker 2: Ja, antagligen. Är de från betan?
+[00:08:31] speaker 3: Eh, jag tror det. De flesta skrev att de var med i testprogrammet i alla fall.
+[00:08:39] speaker 2: Då är det nog det.
+[00:08:43] you: Går det att fixa?
+[00:08:46] speaker 2: Ja, alltså, det går, men det är inte en snabbfix. Vi måste typ, eh, paginera datan eller rendera grafen i bitar. Jag gissar tre, fyra dagar. Plus testning på riktiga telefoner, och vi har bara, vad, två gamla Android-telefoner på kontoret.
+[00:09:06] speaker 1: Och releasen är ju planerad till den sjunde. Det är nästa onsdag.
+[00:09:13] you: Mm.
+[00:09:15] speaker 1: Så det blir tajt.
+[00:09:19] speaker 2: Det blir väldigt tajt.
+[00:09:22] you: Okej. Så frågan är, ska vi skjuta på releasen en vecka, eller... alltså, finns det något annat alternativ?
+[00:09:31] speaker 2: Ett alternativ är att vi släpper som planerat men stänger av nya budgetgrafen på gamla Android. Vi har ju flaggsystemet, och vi kan targeta på OS-version. Då får de bara den gamla grafen, och den har ju funkat i två år.
+[00:09:52] speaker 1: Det gillar jag faktiskt. Marknad har redan, alltså, de har bokat nyhetsbrevet och Instagram-grejerna till den sjunde. Och det är en influencer-grej också, den där ekonomibloggaren. Det blir rörigt att flytta.
+[00:10:08] speaker 3: Men då får ju elva procent inte den nya grejen. Är det okej?
+[00:10:15] speaker 1: De har ju inte den idag heller. Så de förlorar inget.
+[00:10:21] speaker 3: Nej, sant. Det känns bara lite, eh, lite orättvist kanske.
+[00:10:27] you: Mm. Johan, hur säker är du på att det bara är grafen som kraschar?
+[00:10:35] speaker 2: Eh, alltså... ganska säker. Alla stacktraces jag har tittat på pekar dit. Jag har inte gått igenom alla, men de flesta.
+[00:10:46] you: Okej. Då... då säger vi så. Vi släpper som planerat den sjunde, och vi stänger av nya budgetgrafen på Android 9 och äldre med feature flag. Och så får den riktiga fixen komma i en patch efteråt.
+[00:11:04] speaker 1: Bra, då behöver jag inte ringa marknad. Skönt, faktiskt.
+[00:11:11] speaker 2: Jag går igenom resten av stacktraces medan vi pratar, bara för att vara säker. Jag har Crashlytics uppe ändå.
+[00:11:21] you: Gör det. Eh, Amira, du hade en fråga om Android 7?
+[00:11:25] speaker 3: Ja, eller, jag undrade bara hur många som faktiskt kör Android 7 fortfarande. För vi får ju supportärenden därifrån också, och det är ofta konstiga saker.
+[00:11:38] speaker 2: Det är under en procent. Noll komma sju, tror jag. Och ärligt talat är det en jäkla massa jobb att stödja dem. Vi har typ tre olika workarounds i koden bara för Android 7. Jag skulle helst vilja att vi slutar stödja det.
+[00:11:59] you: Har vi någon avtalsgrej, någon bank eller partner som kräver det?
+[00:12:06] speaker 1: Nej, inte vad jag vet. Tink kräver ju Android 8 själva i sin nya SDK, om jag minns rätt.
+[00:12:16] speaker 2: Ja, det gör de. Så vi måste nästan ändå.
+[00:12:21] you: Okej, då höjer vi lägsta versionen till Android 8 från och med 3.2.
+[00:12:27] speaker 3: Och de som har Android 7, vad händer med dem? Försvinner appen?
+[00:12:34] speaker 2: Nej, nej. De ligger kvar på 3.1, den fortsätter att funka. Play Store sköter det automatiskt, de får bara inte uppdateringen.
+[00:12:46] speaker 3: Okej, bra. Då vet jag vad jag ska svara.
+[00:12:51] speaker 2: Fast, alltså, det här är ju egentligen ett symptom på en större grej. Jag var på den där konferensen i Göteborg förra månaden, och det var en jättebra talk om Kotlin Multiplatform, och alltså, om vi skrev om hela graflagret i Compose så skulle vi slippa typ allt det här, och vi skulle kunna dela logiken med iOS, och...
+[00:13:18] speaker 1: Johan.
+[00:13:20] speaker 2: Ja?
+[00:13:22] speaker 1: Vi har pratat om det här.
+[00:13:26] speaker 2: Jag vet, jag vet. Men alltså, på riktigt, de visade benchmarks där renderingen blev typ tre gånger snabbare på gamla telefoner. Och det var ett företag i Malmö som hade skrivit om hela sin app på ett halvår, och...
+[00:13:43] you: Det låter spännande, men jag tror inte att det är dagens möte. Vi kan ta det på en teknikfredag någon gång.
+[00:13:53] speaker 2: Okej. Ja. Förlåt, jag blev lite exalterad.
+[00:13:57] speaker 3: Det är gulligt när du blir exalterad.
+[00:14:01] speaker 2: Tack, Amira.
+[00:14:04] you: Haha. Okej, ska vi gå vidare till priset för Plus? Sara, du har gjort lite research, va?
+[00:14:12] speaker 1: Ja. Eh, så jag har tittat på konkurrenterna, och jag har kollat vad vi har fått för svar i enkäten. Ska jag dela skärmen igen?
+[00:14:25] you: Ja, gärna.
+[00:14:27] speaker 1: Okej. Så. Pengakollen tar trettionio kronor i månaden, men de har inte bankkoppling, man får knappa in allt själv. Budgetbuddy tar femtionio, och de har ungefär samma features som vi kommer ha i Plus. Och sen den norska, Fyrk, de tar sextionio, men det är i norska kronor, så det blir, eh, ungefär samma sak.
+[00:14:52] you: Och vad sa enkäten?
+[00:14:56] speaker 1: Enkäten, där fick vi in typ åttahundra svar. Och det var ungefär fyrtio procent som sa att de kunde tänka sig att betala för Plus. Och av dem sa de flesta att, alltså, under femtio kronor kändes rimligt. Över femtio sjönk det ganska mycket.
+[00:15:16] speaker 3: Vad ingår i Plus nu igen? Jag vill vara säker på att jag förklarar det rätt för folk.
+[00:15:24] speaker 1: Sparmål med automatiska överföringar, obegränsat antal bankkopplingar, alltså i gratisversionen får man ju bara två, och så delad budget med partner. Och exporten, när den väl kommer.
+[00:15:36] speaker 3: Okej. Delad budget är det folk frågar mest om. Det kommer att bli populärt.
+[00:15:43] you: Så vad föreslår du?
+[00:15:47] speaker 1: Jag tänkte fyrtionio i månaden. Och sen ett årsabonnemang för trehundranittionio, så det blir typ, eh, ett par månader gratis om man betalar årsvis.
+[00:15:59] speaker 2: Kom ihåg att Apple och Google tar sin del också. Femton procent, eftersom vi är under miljonen. Så av fyrtionio får vi, vad, fyrtiotvå kronor typ. Och sen moms.
+[00:16:14] speaker 1: Ja, jag har räknat på det. Efter avgift och moms blir det ungefär trettiofyra kronor per betalande användare och månad. Och om vi får, säg, fem procent av de aktiva att konvertera, så täcker det serverkostnaderna och ungefär en halv tjänst.
+[00:16:33] you: Bara en halv?
+[00:16:36] speaker 1: Ja, i början. Det växer ju förhoppningsvis.
+[00:16:41] speaker 2: Varför inte trettionio då? Då är vi billigast.
+[00:16:46] speaker 1: Man vill inte vara billigast, tror jag. Då ser det ut som att Slant är sämre. Och vi har bankkopplingen, det har inte Pengakollen.
+[00:16:57] speaker 2: Mm. Men femtionio då? Budgetbuddy tar femtionio.
+[00:17:01] speaker 1: Enkäten sa ju att det sjönk ganska mycket över femtio. Så det känns som att fyrtionio är sweet spot.
+[00:17:10] you: Jag håller med Sara. Och vi kan alltid höja senare, det är svårare att sänka.
+[00:17:18] speaker 2: Är det inte tvärtom? Det är väl svårare att höja, folk blir ju arga.
+[00:17:25] you: Fast om vi höjer för nya användare och låter de gamla ligga kvar på sitt pris, så är det ingen som blir arg.
+[00:17:34] speaker 2: Okej, sant.
+[00:17:37] speaker 3: Kan jag bara slänga in en grej? Vi har ju väldigt många studenter som använder appen. Typ, när jag kollar supportärendena så är det jättemånga som skriver från studentmail. Borde vi inte ha en studentrabatt? Typ tjugonio kronor eller något?
+[00:17:57] speaker 1: Åh, det är en bra poäng faktiskt.
+[00:18:01] speaker 2: Men hur verifierar man att någon är student då? Det är ju en hel grej. Mecenat eller vad det heter, man måste integrera mot dem.
+[00:18:12] speaker 3: Ja, jag vet inte. Men det känns som att vi tappar en stor grupp annars.
+[00:18:19] you: Jag tycker det är intressant, men vi vet för lite. Vi vet inte hur många studenter vi har, vi vet inte vad det kostar att verifiera. Så studentrabatten, den tar vi inte beslut om idag. Den får vänta tills efter lanseringen, när vi ser hur konverteringen ser ut.
+[00:18:41] speaker 3: Okej. Rimligt.
+[00:18:44] you: Men priset, fyrtionio i månaden och trehundranittionio om året. Är alla okej med det?
+[00:18:51] speaker 2: Ja.
+[00:18:53] speaker 3: Ja.
+[00:18:55] speaker 1: Ja. Då kör vi på det.
+[00:18:58] you: Bra. Då är det bestämt.
+[00:19:02] speaker 1: Nice. Äntligen. Vi har pratat om det här i typ tre veckor.
+[00:19:09] speaker 2: Fyra.
+[00:19:11] speaker 1: Fyra, ja.
+[00:19:14] you: Okej, eh, Amira, support. Vad är det folk säger?
+[00:19:19] speaker 3: Ja. Så, eh, förutom kraschen som vi redan pratat om så är det tre saker som kommer upp hela tiden. Det första och största är att bankkopplingen slutar funka efter ett tag. Folk skriver att de måste logga in med BankID igen, och de förstår inte varför.
+[00:19:39] speaker 2: Det är ju nittiodagarsgrejen. PSD2-samtycket går ut efter nittio dagar, och då måste man förnya det.
+[00:19:49] speaker 3: Ja, fast det är något konstigt med det. För vissa skriver att det händer efter typ tre veckor. Och det är nästan alltid Handelsbanken.
+[00:19:59] speaker 2: Tre veckor? Det ska inte hända.
+[00:20:03] speaker 3: Nej, men det är det de skriver. Jag har typ tjugo ärenden om det bara den här månaden.
+[00:20:12] speaker 1: Är det vi eller är det Tink, eller är det banken?
+[00:20:18] speaker 2: Ingen aning, faktiskt. Det kan vara vilket som.
+[00:20:23] you: Mm. Någon borde kolla det där med Handelsbanken, om det är Tink eller om det är vi. Det låter som något som kan bli stort.
+[00:20:34] speaker 2: Ja. Absolut. Jag hinner inte just nu i alla fall, inte med kraschen.
+[00:20:41] you: Nej, nej, förstås.
+[00:20:44] speaker 3: Okej. Det andra är kategoriseringen. Swish-betalningar hamnar nästan alltid i "Övrigt", och folk blir irriterade för att de måste ändra manuellt varje gång. Speciellt de som swishar hyra eller typ, eh, delar räkningar med kompisar.
+[00:21:01] speaker 1: Det har vi ju på roadmapen. Smart kategorisering. Det är tänkt för Q1.
+[00:21:08] speaker 3: Ja, jag vet. Jag säger bara att det är mycket.
+[00:21:14] speaker 1: Nej, men det är bra att veta. Det kanske borde upp i prio.
+[00:21:21] speaker 3: Och det tredje är mer, eh, positivt faktiskt. Många gillar notiserna när man närmar sig budgettaket. Vi har fått typ, alltså, flera mail där folk tackar för dem. En kvinna skrev att hon hade sparat ihop till en resa till Thailand tack vare dem.
+[00:21:39] you: Åh, vad kul.
+[00:21:42] speaker 2: Det är ju min feature.
+[00:21:46] speaker 1: Den var min idé.
+[00:21:49] speaker 2: Min kod.
+[00:21:51] you: Haha, den är allas. Okej. Amira, det här är jättebra input. Skulle du kunna sammanställa det här lite mer ordentligt? Typ topp fem klagomålen med antal ärenden, så att vi kan använda det på sprintplaneringen på torsdag?
+[00:22:07] speaker 3: Ja, absolut. Jag fixar det till torsdag.
+[00:22:12] you: Tack.
+[00:22:14] speaker 2: Eh, förlåt, kan jag gå tillbaka till kraschen en sekund? Jag har gått igenom resten av stacktraces nu.
+[00:22:24] you: Ja?
+[00:22:26] speaker 2: Det är inte bara grafen. Alltså, ungefär en tredjedel av kraschen händer i transaktionslistan, när appen synkar mot banken i bakgrunden. Det är samma minnesproblem, vi laddar in allt på en gång. Och den listan kan vi inte flagga bort, den är ju, alltså, den är hela appen.
+[00:22:47] speaker 1: Åh nej.
+[00:22:49] you: Så även om vi stänger av grafen så kommer det att krascha?
+[00:22:55] speaker 2: Ja. För de som har mycket historik i alla fall. Det blir färre kraschar, men de försvinner inte. Och en krasch vid synk är nästan värre, för då tror folk att deras bankdata har försvunnit.
+[00:23:11] speaker 3: Och det är det sista vi vill, att folk tror att pengarna är borta.
+[00:23:18] you: Nej. Okej. Då... då ändrar vi oss. Vi kan inte släppa något som vi vet kraschar för en tiondel av Android-användarna. Vi skjuter releasen en vecka, till den fjortonde, och så gör vi fixen ordentligt i stället. Och då skippar vi den där flaggan för grafen, den behövs inte om vi fixar grundproblemet.
+[00:23:44] speaker 1: Okej. Jag håller med, även om det är jobbigt. Men då får jag ju ringa marknad ändå.
+[00:23:54] you: Ja, tyvärr.
+[00:23:57] speaker 1: Det är lugnt. Jag uppdaterar releaseplanen och pratar med marknad om det nya datumet i dag, så de hinner flytta nyhetsbrevet och influencer-grejen.
+[00:24:08] speaker 2: Och jag fixar minnesproblemet, både i grafen och i transaktionslistan. Jag siktar på att ha en PR uppe senast onsdag, så vi har några dagar att testa.
+[00:24:21] you: Bra. Behöver du hjälp?
+[00:24:25] speaker 2: Kanske med testningen. Men vi tar det på standup.
+[00:24:31] you: Okej. Det känns faktiskt bättre. Hellre en vecka sen än en massa enstjärniga recensioner.
+[00:24:38] speaker 1: Ja. Senast vi hade en krasch gick vi från fyra komma sex till fyra komma ett på Play Store på en vecka.
+[00:24:49] speaker 2: Påminn mig inte.
+[00:24:52] you: Okej. Sista punkten, designern. Eh, vi har ju pratat om att vi behöver en designer sen Linnea slutade i våras. Och just nu gör vi ju typ... alltså, Johan och jag gör skisser i Figma och det blir, ja.
+[00:25:10] speaker 2: Det blir inte snyggt.
+[00:25:14] you: Det blir inte snyggt. Så, eh, frågan är om vi ska anställa någon fast eller ta in en konsult.
+[00:25:24] speaker 1: Jag tycker fast. Vi behöver någon som äger designsystemet långsiktigt, och konsulter försvinner ju efter ett tag och tar kunskapen med sig.
+[00:25:35] speaker 3: Men en fast anställning tar ju typ fyra, fem månader att rekrytera. Och vi behöver någon nu, eller alltså, igår typ. Plus-lanseringen kommer att kräva mycket design, alla nya skärmar, paywallen, allt det där.
+[00:25:52] speaker 2: Och vi vet inte riktigt hur mycket designjobb det blir efter Plus. Det kanske inte räcker till en heltid.
+[00:26:01] speaker 1: Jo, det gör det. Det finns alltid designjobb. Titta på inställningarna, de har inte gjorts om sen 2021.
+[00:26:09] speaker 2: Haha, okej, touché.
+[00:26:12] you: Vad kostar det, har någon koll?
+[00:26:16] speaker 1: En konsult ligger på typ, eh, åtta, niohundra i timmen. Så det är dyrare per månad än en anställd, ganska mycket dyrare. Men man har ingen uppsägningstid och ingen rekryteringskostnad.
+[00:26:32] speaker 3: Och det vore bra om den personen kan göra lite användarintervjuer också. Jag har massa användare som har sagt att de gärna ställer upp.
+[00:26:41] you: Mm. Jag tänker så här: vi tar in en konsult på sex månader. Då får vi hjälp direkt med Plus, och vi hinner se hur mycket designjobb det faktiskt finns. Och om det visar sig att vi behöver någon på heltid, så kan vi rekrytera fast efter det. Kanske till och med konsulten, om det är någon bra.
+[00:27:07] speaker 1: Hmm. Okej. Jag kan leva med det, om vi faktiskt utvärderar efter sex månader och inte bara förlänger av bara farten.
+[00:27:20] you: Absolut. Det är ju hela poängen.
+[00:27:24] speaker 3: Jag gillar det.
+[00:27:27] speaker 2: Ja, samma.
+[00:27:30] you: Okej, då bestämmer vi det. Designern tas in som konsult på sex månader, inte som fast anställd, i alla fall inte nu.
+[00:27:40] speaker 1: Då kan jag skriva ihop en brief. Vad vi behöver, typ Plus-skärmarna, designsystemet och bilderna till App Store, och så användarintervjuerna som Amira sa. Och så skickar jag den till två byråer. Jag har en kontakt på Formverket, och sen finns det den där, eh, Studio Norrsken som vi pratade med förra året.
+[00:28:05] you: Toppen. Gör det. Och jag tar budgetsnacket med Karin, för det här måste ju in i budgeten för Q4, och hon kommer att ha åsikter.
+[00:28:19] speaker 2: Hon har alltid åsikter.
+[00:28:23] you: Det är hennes jobb att ha åsikter. Jag pratar med henne innan fredag.
+[00:28:30] speaker 1: Ska briefen gå ut innan du har pratat med Karin då?
+[00:28:35] you: Eh, bra fråga. Skriv den, men vänta med att skicka den tills jag har pratat med henne. Det borde vara klart på fredag.
+[00:28:47] speaker 1: Okej.
+[00:28:49] you: Okej. Jag tror vi har gått igenom allt. Är det något mer någon vill ta upp?
+[00:28:56] speaker 3: Nej, inte från mig.
+[00:29:00] speaker 2: Jo, en liten sak. Jag är ledig på fredag, det är min brorsas bröllop, bara så ni vet.
+[00:29:09] speaker 1: Åh, kul! Var är det?
+[00:29:13] speaker 2: På Gotland. Vi åker på torsdag kväll. Jag är lite nervös, jag ska hålla tal.
+[00:29:21] speaker 3: Du kan prata om Kotlin Multiplatform.
+[00:29:25] speaker 2: Haha, ja, det skulle bli en hit.
+[00:29:30] you: Haha. Grattis till brorsan. Okej, men då, då säger vi tack för idag. Anteckningarna hamnar i Notion som vanligt.
+[00:29:40] speaker 1: Tack!
+[00:29:42] speaker 3: Tack, och ta en bulle innan ni går. Seriöst, det finns typ tjugo kvar.
+[00:29:50] speaker 2: Hej då, och spara en till mig.
+[00:29:55] you: Vi försöker. Hej då!

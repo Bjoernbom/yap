@@ -1,0 +1,28 @@
+{
+  "language": "sv",
+  "durationMinutes": 30,
+  "title": "Releaseplanering Slant 3.2",
+  "decisions": [
+    "Releasen av Slant 3.2 skjuts upp en vecka, från den 7 till den 14 oktober, så att minneskraschen på äldre Android kan fixas ordentligt.",
+    "Lägsta Android-version höjs till Android 8 från och med 3.2; användare på Android 7 blir kvar på 3.1.",
+    "Nya onboardingen rullas ut bakom en feature flag till 20 procent av nya användare först.",
+    "Slant Plus kostar 49 kronor i månaden eller 399 kronor om året.",
+    "Designern tas in som konsult på sex månader i stället för en fast anställning, med utvärdering efter sex månader."
+  ],
+  "actionItems": [
+    { "task": "Sätta upp feature flaggan för nya onboardingen (20 procent) när PR:en är mergad, i dag eller i morgon.", "owner": "Johan" },
+    { "task": "Fixa minnesproblemet i budgetgrafen och transaktionslistan och ha en PR uppe senast onsdag.", "owner": "Johan" },
+    { "task": "Uppdatera releaseplanen och informera marknad om det nya releasedatumet den 14 oktober, i dag.", "owner": "Sara" },
+    { "task": "Sammanställa topp fem supportklagomålen med antal ärenden till sprintplaneringen på torsdag.", "owner": "Amira" },
+    { "task": "Skriva en brief för designkonsulten och skicka den till två byråer (Formverket och Studio Norrsken) efter att budgeten är klar med Karin.", "owner": "Sara" },
+    { "task": "Prata med Karin om budget för designkonsulten i Q4-budgeten innan fredag.", "owner": "you" },
+    { "task": "Undersöka varför Handelsbanken-kopplingen tappar samtycket efter cirka tre veckor, och om felet ligger hos Tink, banken eller Slant.", "owner": null }
+  ],
+  "notDecided": [
+    "Studentrabatt på Slant Plus (till exempel 29 kronor i månaden) diskuterades men beslutades inte; frågan tas upp igen efter lanseringen."
+  ],
+  "reversed": {
+    "initial": "Släppa 3.2 som planerat den 7 oktober och stänga av nya budgetgrafen på Android 9 och äldre med feature flag, med fixen i en senare patch.",
+    "final": "Skjuta releasen en vecka till den 14 oktober och fixa minnesproblemet ordentligt, utan feature flag för grafen."
+  }
+}

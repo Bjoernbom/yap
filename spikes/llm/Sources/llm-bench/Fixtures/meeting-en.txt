@@ -1,0 +1,303 @@
+[00:00:03] you: Hey, hey. Can everyone hear me okay?
+[00:00:08] speaker 1: Yep, loud and clear.
+[00:00:11] speaker 2: Yeah, you're good.
+[00:00:13] you: Great. Um, Grace, are you, are you with us? I see your camera but I think you're muted.
+[00:00:22] speaker 3: Sorry, sorry. I'm here. My, uh, my headphones decided to connect to the other laptop. Classic Monday.
+[00:00:30] speaker 1: That happens to me every single morning, I swear.
+[00:00:35] you: Okay, we're just waiting on Marcus. Tom, how was the, uh, the tournament this weekend? Your daughter's soccer thing?
+[00:00:44] speaker 2: Oh, it was, it was great, actually. They made it to the semifinal and then lost on penalties, which, you know, at nine years old is basically a national tragedy. There were tears. Some of them were mine.
+[00:01:01] speaker 3: Oh no.
+[00:01:03] speaker 2: No, it was fine. We got ice cream. Everyone recovered.
+[00:01:08] speaker 1: Penalties are brutal though. Like, that's a lot of pressure on a nine-year-old.
+[00:01:14] speaker 2: It's a lot of pressure on the parents. The kids forgot about it in, like, twenty minutes.
+[00:01:21] speaker 4: Hey, sorry, sorry, I'm late. My previous call ran over. Did I miss anything?
+[00:01:28] you: No, you're fine, Marcus. We were just, uh, hearing about Tom's emotional weekend.
+[00:01:34] speaker 4: Uh oh.
+[00:01:36] speaker 2: Soccer. Nine-year-olds. Penalty shootout. It's a long story.
+[00:01:41] speaker 4: Say no more. My son's team hasn't won a game since, like, April, so I know the feeling. How's everybody else? Priya, weren't you, you were moving apartments, right?
+[00:01:55] speaker 1: Yes. Done, finally. Everything is still in boxes, but the, the internet works, which is the only thing that matters.
+[00:02:04] speaker 3: Priorities.
+[00:02:06] speaker 1: Exactly. I have a desk and a router. The kitchen can wait.
+[00:02:12] you: Honestly, respect. Okay, and Grace, you were at that product conference in Austin last week, right?
+[00:02:19] speaker 3: Yeah, ProductCon. It was, um, it was fine. A lot of talks about AI agents, obviously. Like, every single talk. But I had a couple of really good conversations with people doing usage-based pricing, which is actually relevant for later, so I'll bring that up when we get there.
+[00:02:40] speaker 4: Did you, uh, did you get any good swag at least?
+[00:02:44] speaker 3: A tote bag and a water bottle that leaks. So, the usual.
+[00:02:49] you: Perfect. Okay, um, let's get going, we have a lot to get through today. I'll share the agenda real quick. Can you all see my screen?
+[00:03:01] speaker 2: Yep.
+[00:03:03] you: Cool. So first, uh, the incident from last Tuesday, the migration. I want to spend maybe ten minutes on that, not a full postmortem, just what happened and what we're changing. Then Q4 roadmap. So SSO, the usage-based pricing experiment, the mobile app, on-call rotation, and then Marcus has the Northwind escalation, which, um, which is kind of connected to the incident, so.
+[00:03:32] speaker 4: Very connected.
+[00:03:34] you: Yeah. Okay. Priya, you want to kick us off?
+[00:03:38] speaker 1: Sure. Um, so, quick recap for anyone who wasn't in the channel. Last Tuesday, September twenty-second, at about two fifteen PM Eastern, we ran a migration against the main Postgres cluster. It was adding a column to the events table, uh, a nullable column with a default, and it was supposed to be, like, a trivial change.
+[00:04:03] speaker 2: Famous last words.
+[00:04:05] speaker 1: Yeah. So the events table is, uh, it's about eight hundred million rows now. And the migration needs an access exclusive lock on the table. Normally, adding a column with a default is fast in Postgres fourteen, it's basically a metadata-only change. But the migration was waiting on the lock behind a long-running analytics query, and while it was waiting, every other query on that table queued up behind it.
+[00:04:36] speaker 4: So everything just stopped.
+[00:04:39] speaker 1: Everything just stopped. The API pods started timing out, the connection pool in PgBouncer filled up, and then Kubernetes started failing the readiness probes and restarting the pods, which made it worse, because the new pods were all trying to open connections to a pool that was already full.
+[00:05:01] you: And that's the, the crash loop we saw in Grafana.
+[00:05:05] speaker 1: Right. So we had, um, full downtime from two seventeen to two fifty-seven. So forty minutes. The API was returning five-oh-threes for pretty much every customer.
+[00:05:18] speaker 3: And the dashboard was, like, completely blank for customers during that time? Or was it showing stale data?
+[00:05:27] speaker 1: Blank. Well, a spinner. A spinner forever.
+[00:05:31] speaker 3: Okay.
+[00:05:32] speaker 2: And, uh, just to add, what actually got us out was, we killed the analytics query, the migration grabbed the lock and finished in, like, under a second, and then we had to manually scale the API deployment down and back up to clear the crash loop. So the fix was thirty seconds of work once we understood it. It was the understanding it that took forty minutes.
+[00:06:03] you: Which is usually how it goes. Um, who was on call?
+[00:06:07] speaker 2: Me. I was primary. Priya was, uh, basically secondary, even though she wasn't officially on call.
+[00:06:14] speaker 1: I was just lurking in the channel. I saw the alerts.
+[00:06:18] you: Well, thank you both. Seriously. Okay, so what, uh, what went wrong process-wise? Like, why did this get through?
+[00:06:27] speaker 1: So, a few things. One, we don't set a lock timeout on migrations. If we'd set lock timeout to, like, five seconds, the migration would've just failed and retried, and nobody would've noticed anything. Two, it ran in the middle of the day during peak traffic, because our deploy pipeline just runs migrations whenever you merge. And three, that analytics query shouldn't have been running against the primary at all. It should've been on the read replica.
+[00:07:01] speaker 4: Why was it on the primary?
+[00:07:04] speaker 2: That's, uh, that's a good question. It's the weekly export job that someone set up, I think, like, two years ago. It had the primary connection string hardcoded. Nobody knew.
+[00:07:18] speaker 4: Of course it did.
+[00:07:20] speaker 2: I already fixed that one, actually. It's pointing at the replica now. That went out Thursday.
+[00:07:26] you: Nice. Okay.
+[00:07:28] speaker 3: Can I ask a, maybe a dumb question? How often do we run migrations on big tables like that? Is this a once-a-year thing, or is this, like, every week?
+[00:07:42] speaker 1: Not a dumb question. Um, I actually looked at this. In the last six months we ran thirty-one migrations total, and eleven of them touched tables with more than ten million rows. So it's not rare.
+[00:07:58] speaker 3: So it's, it's roughly every other week.
+[00:08:02] speaker 1: Roughly, yeah.
+[00:08:04] speaker 2: And the thing is, most of them are totally fine. It's the, it's the combination of the lock plus the long query plus peak traffic that did it. But that combination will happen again if we don't change something.
+[00:08:22] you: Right. So what are we proposing?
+[00:08:25] speaker 1: So my proposal is, um, any migration that touches a table with more than ten million rows has to, one, set a lock timeout, like five seconds, and two, get a review from someone on the platform team before it merges. And three, those run outside of peak hours. So before eight AM or after seven PM Eastern.
+[00:08:51] speaker 2: I'd, I'd add, we should enforce the lock timeout in CI, not just rely on people remembering. Like a lint check that fails the build if a migration file doesn't set it.
+[00:09:06] speaker 1: Yes. Totally.
+[00:09:08] speaker 4: How much does that slow things down? For, for the teams shipping features, I mean.
+[00:09:15] speaker 2: Honestly, not much. The review is the only real overhead, and it's eleven migrations in six months. That's, like, two a month.
+[00:09:26] speaker 4: Okay, that's nothing.
+[00:09:28] you: Yeah, I'm fully on board. Does anyone object? Grace?
+[00:09:32] speaker 3: No, makes sense to me.
+[00:09:35] you: Okay, so let's call that decided. Migrations on tables over ten million rows need a lock timeout enforced in CI, a platform review, and they run outside peak hours. Tom, can you own the CI check?
+[00:09:51] speaker 2: Yeah, I'll add the lint check to the migration pipeline. I can probably have it in by, um, end of next week. So October ninth.
+[00:10:03] you: Great. And Priya, the written postmortem?
+[00:10:07] speaker 1: Yeah. I'll write it up and publish it on Confluence by Thursday, October first. And I'll do a short customer-facing version at the same time, because I'm guessing Marcus is going to want one.
+[00:10:23] speaker 4: Marcus is definitely going to want one. We'll get to why in the Northwind part.
+[00:10:31] speaker 2: There's, um, one more bigger thing I want to raise, and I don't think we need to decide it today, but I want it on the radar. The events table is eight hundred million rows and it's growing, like, fifteen percent a month. At some point we should move it off the main cluster. Either partition it, or, or honestly, look at moving to Aurora, or something like Timescale just for the events data.
+[00:11:03] speaker 1: I've been saying this for a year.
+[00:11:06] speaker 2: I know. I know you have.
+[00:11:09] you: How big a project is that?
+[00:11:11] speaker 2: Oh, it's big. Moving to Aurora, the migration itself is probably a quarter of work for two people. Partitioning is less, maybe six weeks, but it touches a lot of queries.
+[00:11:25] speaker 3: And does that compete with SSO? Because that's the same people, right?
+[00:11:31] speaker 2: Kind of, yeah. Partly.
+[00:11:34] you: Okay, so, um, I don't want to decide this right now. I think it's a real conversation, but I don't have enough to go on, and I'm not going to throw a quarter of platform work at it without a proper proposal and some numbers. Let's park it. We'll come back to it in Q1 planning.
+[00:11:59] speaker 2: That's fair. I'm not asking for a decision. Just, just flagging.
+[00:12:04] speaker 1: Flagging again.
+[00:12:06] speaker 2: Flagging for the fifth time.
+[00:12:08] you: Noted. Very noted. Okay, anything else on the incident? What about communication? I felt like the status page was, um, kind of late.
+[00:12:19] speaker 4: Oh, it was very late. The first status page update went out at two forty-one. So that's, what, twenty-four minutes after we went down. Northwind's ops team had already emailed me twice by then.
+[00:12:35] speaker 1: Yeah, that's on us. We were heads down debugging, and nobody thought about the status page until Marcus pinged.
+[00:12:44] speaker 3: Is there a template, or, like, a runbook for that?
+[00:12:48] speaker 1: There's a runbook, but it's, uh, it's really out of date. It still references the old Statuspage account from before we switched to Instatus.
+[00:12:59] speaker 2: Oh, wow. Yeah.
+[00:13:01] speaker 4: Someone should really update that runbook so the first status post goes out within ten minutes of an incident being declared. Like, whoever's on call shouldn't have to think about it.
+[00:13:15] speaker 2: Yeah, agreed.
+[00:13:17] speaker 1: Hundred percent.
+[00:13:19] you: Yeah. Okay. Um, the other thing I wanted to ask. Should we just do a change freeze in December? Like, the last two weeks of the year, no migrations, no big deploys? A lot of our customers do their year-end reporting then, and I really don't want a repeat of Tuesday on December twentieth.
+[00:13:43] speaker 2: I mean, I'm not against it, but half the team is out those two weeks anyway, so there's not going to be a ton shipping.
+[00:13:55] speaker 1: I'd rather see the data first. Like, how many deploys did we actually do in the last two weeks of last December, and did any of them cause problems? If the answer is three deploys and zero issues, a freeze is kind of just theater.
+[00:14:16] speaker 3: From the product side, I'd want to make sure it doesn't block the pricing experiment, if that's still running then.
+[00:14:26] speaker 4: Customers would like it, though. Some of our enterprise customers literally ask about it in security questionnaires. Like, do you have a change freeze policy, yes or no.
+[00:14:39] you: Hm. Okay. Yeah, let's not decide that today. I hear good arguments both ways, and I'd, I'd rather look at it properly in November when we're closer.
+[00:14:52] speaker 1: Sounds good.
+[00:14:54] you: Okay, moving on. SSO. Grace, you want to take it?
+[00:14:58] speaker 3: Yeah. So, um, SSO. This is the number one thing on the enterprise feature request list. We have, uh, let me see, fourteen open deals in the pipeline right now where SSO is either a requirement or listed as a blocker. Marcus, correct me if I'm wrong, but that's roughly one point two million in potential ARR.
+[00:15:23] speaker 4: One point three, actually. Keller Health came in last week, and they need it too.
+[00:15:31] speaker 3: One point three. Okay. So it's big. And the question for today is really scope, because SSO can mean a lot of things. There's SAML, there's OIDC, there's SCIM provisioning, and then there's Okta, Azure AD, Google Workspace, OneLogin, and so on. And we can't do all of it in Q4.
+[00:15:54] speaker 2: Definitely not.
+[00:15:56] speaker 3: So what I'd propose is, we start with SAML, with Okta as the first supported identity provider. Because when I look at the fourteen deals, ten of them are on Okta. Three are on Azure AD, and one is, uh, Google.
+[00:16:15] speaker 1: Ten out of fourteen is pretty clear.
+[00:16:18] speaker 3: Yeah. And then Azure AD would be next, probably Q1. And SCIM, so automatic user provisioning and deprovisioning, I'd push that to Q1 as well.
+[00:16:30] speaker 4: Can I push back on SCIM a little? Because, um, a couple of the bigger ones, Keller specifically, they've said that without deprovisioning their security team won't sign off. Like, when someone leaves their company, that person needs to lose access automatically.
+[00:16:49] speaker 2: Is that a hard requirement, or is it, like, a nice-to-have they put on a list?
+[00:16:57] speaker 4: For Keller it's hard. For the others I'd say it's mostly nice-to-have. They'll accept just-in-time provisioning with SAML and a manual deprovisioning process for now.
+[00:17:09] speaker 2: And honestly, with SAML enforced, if someone gets removed from Okta, they can't log in anymore anyway. Their account just sits there. So it's not, it's not as bad as it sounds security-wise.
+[00:17:25] speaker 4: That's a good point. I can use that with Keller.
+[00:17:31] speaker 3: Okay, so I think we keep SCIM for Q1.
+[00:17:35] you: Tom, what's the, uh, engineering estimate on SAML with Okta?
+[00:17:40] speaker 2: So, um, I had a quick look. We'd use a library rather than roll our own SAML parsing, because rolling your own SAML is, like, how you end up on the front page of Hacker News for the wrong reasons.
+[00:17:58] speaker 1: Please don't roll your own SAML.
+[00:18:01] speaker 2: I will not. I promise. So, with a library, plus the admin UI for configuring it, plus enforcing SSO login for an org, plus a break-glass admin account for when someone's Okta config is broken, plus testing, I'd say six to seven weeks with two engineers. So if we start October fifth, we could have a beta around, um, mid-November. Like November sixteenth-ish.
+[00:18:29] speaker 3: That works for me. That lines up with a couple of the deals closing in December.
+[00:18:37] speaker 4: It does. It really does. Keller's decision date is December tenth.
+[00:18:42] speaker 1: What's the break-glass thing, sorry?
+[00:18:45] speaker 2: So if a customer enforces SSO and then, like, their Okta admin fat-fingers the certificate, nobody at that customer can log in. So you want one owner account that can still log in with a password and two-factor, to fix it. Otherwise it's a support ticket at two AM.
+[00:19:07] speaker 1: Got it. Yeah, that makes sense.
+[00:19:10] you: And which plans get it? Because I know we talked about this last quarter and didn't really land anywhere.
+[00:19:19] speaker 3: My recommendation is Enterprise plan only. It's pretty standard, like, basically everyone in our space does it that way.
+[00:19:28] speaker 1: The SSO tax.
+[00:19:30] speaker 3: The SSO tax, yeah, I know. People online hate it. But our Business plan customers aren't asking for it, and it's a real lever for upgrades.
+[00:19:42] speaker 4: I agree. And honestly, anyone who needs SSO is probably already talking to me about Enterprise anyway.
+[00:19:50] you: Okay. So let's make that the decision. SSO in Q4 is SAML with Okta first, Enterprise plan only, beta around November sixteenth. Azure AD and SCIM are Q1. Everyone good?
+[00:20:04] speaker 2: Good.
+[00:20:05] speaker 1: Yep.
+[00:20:06] speaker 3: Yes.
+[00:20:07] speaker 4: Yes. Very good.
+[00:20:09] you: Tom, you'll get the Okta side going?
+[00:20:12] speaker 2: Yeah. I'll set up an Okta developer tenant and do a spike on the SAML library this week, so we know if there's anything weird before we commit two people to it. I'll have a short writeup by Friday.
+[00:20:30] you: Great, thanks. Okay. Pricing. Grace, again.
+[00:20:34] speaker 3: Me again. Okay, so, um, the usage-based pricing experiment. Quick context. Right now all of our plans are per seat. Business is forty-nine dollars per seat per month, Enterprise is custom. And we've been seeing a pattern where smaller teams sign up with, like, three or four seats, but they push a huge volume of events through the API, and we're basically losing money on them because of infrastructure costs.
+[00:21:05] speaker 1: The events table, again.
+[00:21:07] speaker 3: The events table, again. Everything comes back to the events table.
+[00:21:12] speaker 2: It's the center of the universe.
+[00:21:14] speaker 3: So, at the conference I talked to a couple of people who moved to a hybrid model. Like, a base platform fee plus metered usage. And one of them said their net revenue retention went up, like, twelve points in the first year. Which, you know, grain of salt, it's a conference conversation. But it's interesting.
+[00:21:39] you: What does the experiment actually look like?
+[00:21:42] speaker 3: So the proposal is, uh, we take new self-serve signups only. Not existing customers, definitely not touching existing customers. And we put ten percent of new signups into a variant where it's a flat twenty-nine dollars a month platform fee, plus two dollars per ten thousand events. We run it for eight weeks and compare conversion to paid and revenue per account against the control.
+[00:22:11] speaker 4: New signups only, you said. Good. Because if we touch existing customers, I'm going to have a riot on my hands.
+[00:22:21] speaker 3: No, no. New signups only. I promise.
+[00:22:24] speaker 1: Is ten percent enough, though? Like, how many signups do we get? I'm just worried we run it for eight weeks and the numbers are too small to mean anything.
+[00:22:38] speaker 3: We get about, um, fourteen hundred self-serve signups a month. So ten percent is roughly, uh, two hundred and eighty over the eight weeks. It's not huge. It's enough to see a big effect, not a small one.
+[00:22:55] speaker 1: Why not twenty percent, then?
+[00:22:58] speaker 3: I thought about it. Honestly, it's mostly about risk. If the pricing page confuses people and conversion tanks, I'd rather that's ten percent of our signups than twenty. We can always go up after the first couple of weeks if it looks healthy.
+[00:23:18] speaker 1: Okay, fair.
+[00:23:20] speaker 2: How do we bill it? Can Stripe do the metered part?
+[00:23:24] speaker 3: Yeah, Stripe has usage-based billing, the metered prices. We'd report usage to Stripe daily from our side, and Stripe handles the invoicing.
+[00:23:35] speaker 2: So we'd need a job that aggregates event counts per account per day and pushes them to Stripe. That's, uh, not hard, but it has to be really reliable, because if it double-counts, we overcharge people.
+[00:23:52] speaker 1: And it reads from the events table.
+[00:23:55] speaker 2: And it reads from the, uh, from the replica. From the replica.
+[00:24:00] speaker 1: Good answer.
+[00:24:02] speaker 2: I learned.
+[00:24:03] you: How much eng time is it?
+[00:24:06] speaker 2: The Stripe side and the usage reporting, maybe two weeks for one person. Plus the pricing page variant and the checkout flow, which is more the frontend team, maybe another week.
+[00:24:20] speaker 3: And I'd want to start October twentieth, so we get a clean eight weeks before the holidays mess up the data.
+[00:24:30] speaker 4: Eight weeks from October twentieth is, what, mid-December?
+[00:24:34] speaker 3: December fifteenth.
+[00:24:36] speaker 4: Okay.
+[00:24:37] speaker 1: One thing, um, one thing I want to make sure of. If a customer in the variant has a spike, like, some bug in their integration sends us fifty million events, do they get a massive bill? Because that's a support nightmare.
+[00:24:56] speaker 3: Good point. I'd want a spending cap. Like, we cap the usage charge at some amount and email them when they hit eighty percent of it.
+[00:25:08] speaker 2: I don't think Stripe does caps natively, so we'd have to enforce that on our side.
+[00:25:16] speaker 3: That's fine. I'll put it in the spec.
+[00:25:19] speaker 4: And what happens at the end? Like, on December fifteenth, the people in the variant, do they stay on usage pricing, or do they get moved back?
+[00:25:32] speaker 3: They stay on it. We honor whatever they signed up for. If we decide not to roll it out, we'd grandfather them, and at some point offer them a migration to per-seat if it's cheaper for them.
+[00:25:50] speaker 4: Okay. Good. As long as nobody gets a surprise invoice.
+[00:25:55] you: Okay, I think this is, um, a good experiment. Low risk because it's only new self-serve signups. Does anyone want to argue against it?
+[00:26:06] speaker 4: No. Just, please, please, nothing for existing customers without talking to me first.
+[00:26:13] you: Understood. So, decided. We run the usage-based pricing experiment on ten percent of new self-serve signups, starting October twentieth, for eight weeks, billed through Stripe metered billing. Existing customers are not touched. Grace, can you write it up?
+[00:26:30] speaker 3: Yeah. I'll write the experiment one-pager, with the pricing, the success metrics, the spending cap, all of that. I'll have it done by October ninth, so eng has time to build before the twentieth.
+[00:26:46] you: Perfect.
+[00:26:47] speaker 1: Grace, the person who said twelve points of NRR, was that, like, B2B, similar size to us?
+[00:26:56] speaker 3: Similar-ish. A bit bigger. Developer tools. So not exactly apples to apples.
+[00:27:03] speaker 1: Okay. Just curious.
+[00:27:05] speaker 2: Oh, speaking of developer tools, did anyone else see the, um, the whole Kubernetes cluster naming thing that blew up in the eng channel on Friday?
+[00:27:17] speaker 3: No, what happened?
+[00:27:19] speaker 2: So, someone proposed that we rename all our clusters after cheeses. Like, prod-brie, staging-gouda.
+[00:27:27] speaker 4: I love this already.
+[00:27:29] speaker 1: It was me. I proposed it. And it was a joke. Mostly.
+[00:27:34] speaker 2: And then, like, forty messages later, there's a poll, and someone's making a very serious case for prod-halloumi, because it's, quote, the most resilient cheese under heat.
+[00:27:47] speaker 3: That's actually a good argument.
+[00:27:49] speaker 4: That's a genuinely good argument.
+[00:27:52] speaker 1: It's a great argument. It's winning the poll by a lot.
+[00:27:56] speaker 2: The only competition is staging-camembert, because, and I'm quoting again, it's supposed to be a bit runny.
+[00:28:05] speaker 3: Okay, that one's also good.
+[00:28:08] speaker 4: Who's writing these? These are too good.
+[00:28:11] speaker 2: The data team. They have a lot of time between, uh, between dbt runs.
+[00:28:16] you: I'm going to stay out of this one. As long as nobody actually renames a production cluster.
+[00:28:25] speaker 2: No, no, nobody's touching real cluster names. It's purely theoretical cheese.
+[00:28:30] speaker 1: For now.
+[00:28:32] you: For now. Okay. Um, where was I. Mobile. The mobile app. So, this one I'll take, because it's kind of been my, my pet project to kill it.
+[00:28:45] speaker 3: Rest in peace.
+[00:28:47] you: Not yet. Okay, so, context. The mobile app, iOS and Android, it's a React Native app we built in twenty twenty-three. It's basically a read-only view of the dashboard, plus push notifications for alerts. Monthly active users on mobile are about, um, two thousand one hundred, versus, like, forty-one thousand on web. So around five percent.
+[00:29:12] speaker 2: And it breaks every time Apple ships a new iOS version.
+[00:29:16] speaker 1: Every single time.
+[00:29:18] you: Right. And we haven't had a dedicated mobile engineer since, uh, since Jonas left in June. So whenever it breaks, someone from the web team has to drop what they're doing and, you know, figure out Xcode again.
+[00:29:35] speaker 2: Which is me, usually. And I hate it.
+[00:29:38] you: So my proposal is, we sunset it. Announce it in October, pull it from the app stores, and shut it down on December thirty-first. And we push people to the mobile web version of the dashboard, which is honestly pretty good now since the responsive redesign.
+[00:29:59] speaker 3: What about push notifications? That's, like, the main thing people use it for.
+[00:30:06] you: We'd tell people to switch to email or Slack alerts. We already support both.
+[00:30:11] speaker 3: Okay. From the product side, I'm fine with it. The usage data backs it up. I looked at it last quarter, and the median mobile user opens it twice a week and looks at one screen.
+[00:30:28] speaker 1: Platform side, yes, please. It's one less thing.
+[00:30:32] speaker 4: Um, I'd want to double-check with a few accounts before we announce, but I don't have any specific objection off the top of my head.
+[00:30:44] you: Okay. So let's go with it. The mobile app gets sunset, announcement in October, shutdown December thirty-first.
+[00:30:53] speaker 2: Finally.
+[00:30:54] you: Okay, on-call. Priya.
+[00:30:57] speaker 1: Yes. So, um, on-call. The current setup is one engineer is primary for a full week, Monday to Monday, and there's no formal secondary. And after last Tuesday, and honestly before that too, people are pretty burned out. Tom did a week in August where he got paged, what, nineteen times?
+[00:31:20] speaker 2: Twenty-two. But who's counting.
+[00:31:23] speaker 1: Twenty-two. And a lot of those were at night.
+[00:31:27] speaker 3: That's awful.
+[00:31:29] speaker 1: So my proposal is two changes. One, we split the week into two shifts. Monday morning to Thursday morning, and Thursday morning to Monday morning. So nobody's on for seven days straight. And two, we add a formal secondary, so there's always a second person who's expected to pick up if the primary doesn't ack within fifteen minutes.
+[00:31:55] speaker 2: The secondary is the big one for me. On Tuesday I really needed a second brain, and Priya just happened to be around.
+[00:32:06] speaker 4: Does that mean more people on call more often, though?
+[00:32:10] speaker 1: Kind of, yeah. We have nine engineers in the rotation. With half-week shifts plus a secondary, each person is on call roughly once every two to three weeks in some role, instead of once every nine weeks for a full week. But each shift is shorter, and the secondary is pretty quiet most of the time.
+[00:32:35] speaker 3: Did the team actually want this? Or is this, like, top-down?
+[00:32:40] speaker 1: No, I ran a survey. Seven out of nine preferred the split shifts. The other two were neutral.
+[00:32:49] speaker 3: Oh, nice. Okay.
+[00:32:51] speaker 1: Also, um, one more thing that affects the schedule. Dan is going on parental leave starting November ninth. He and his partner are expecting their first baby at the end of October. So he's out until early March, and we need to take him out of the rotation for that whole period.
+[00:33:14] speaker 3: Oh, that's so exciting! I didn't know.
+[00:33:17] speaker 1: Yeah, he told the team a couple of weeks ago. He's very excited. And very nervous.
+[00:33:25] speaker 4: As he should be. Tell him congrats from me.
+[00:33:29] speaker 2: The first three months are, uh, they're a lot. He should turn off Slack completely. Like, delete it from his phone.
+[00:33:39] you: Yeah, and I want him to know that's expected, not just allowed. Nobody should be pinging him while he's out. Not for on-call, not for anything.
+[00:33:51] speaker 1: He knows. I already told him, and People Ops walked him through all the leave stuff last week.
+[00:34:00] you: Good.
+[00:34:01] speaker 1: So with Dan out we go down to eight people, which is still fine with split shifts. It's a bit tighter, but it's fine.
+[00:34:12] you: What does it look like if we do nothing? Like, just keep it weekly?
+[00:34:17] speaker 1: Honestly, I think we lose people. Two engineers have brought up on-call in their one-on-ones as a reason they're unhappy.
+[00:34:27] you: Okay, that's, that's enough for me. Let's do it. Split shifts, Monday to Thursday and Thursday to Monday, plus a formal secondary with fifteen-minute escalation. When does it start?
+[00:34:40] speaker 1: I'd say October fifth. That's next Monday. Gives me a week to set it up.
+[00:34:48] you: Great. Decided.
+[00:34:50] speaker 1: I'll set up the new schedule in PagerDuty, with the primary and secondary layers and the fifteen-minute escalation, and I'll take Dan out from November ninth. It'll be live before the fifth.
+[00:35:05] speaker 2: Thank you. Truly.
+[00:35:07] speaker 4: Do we compensate on-call at all? Like, extra pay? I'm just curious, I actually don't know.
+[00:35:15] speaker 1: We pay a flat stipend of two hundred dollars per week. With the split it becomes a hundred per shift, so it's the same per day.
+[00:35:27] speaker 4: Okay, got it.
+[00:35:29] you: Okay. Marcus. Northwind. Let's hear it.
+[00:35:33] speaker 4: Okay. So. Northwind Freight. For anyone who doesn't know them, they're our second-largest customer. Six hundred and twenty thousand ARR. They use us for basically all the operational reporting across their logistics network. And their renewal is December fifteenth.
+[00:35:50] speaker 3: Which is soon.
+[00:35:52] speaker 4: Which is very soon. So, um, during the outage last Tuesday they were in the middle of their afternoon dispatch planning, and their ops dashboards were down for forty minutes. Their VP of operations, Diane Walsh, emailed me directly, then she emailed our CEO, and then she escalated it through their procurement team as a formal SLA breach.
+[00:36:17] speaker 2: Oof.
+[00:36:18] speaker 4: Yeah. And, um, technically, so, our SLA with them is ninety-nine point nine percent monthly uptime. Forty minutes in September puts us at about ninety-nine point nine oh seven, so we're actually just barely above it.
+[00:36:34] speaker 1: Wait, so we didn't breach?
+[00:36:37] speaker 4: Not technically. By about three minutes. But arguing that with her is not going to go well. It's not a winning conversation.
+[00:36:48] you: No. Definitely not.
+[00:36:50] speaker 4: So there are really three things they want. One, a written explanation of what happened and what we're doing so it doesn't happen again. That's Priya's customer-facing version. Two, some kind of credit or concession. And three, and this one is kind of new, they want to know our plans for the mobile app.
+[00:37:14] you: The mobile app?
+[00:37:16] speaker 4: Yeah. I didn't realize this until I talked to their ops lead on Thursday. Um, their drivers use our mobile app. Like, a lot. They have about twelve hundred drivers, and the dispatch team pushes alerts to them through our push notifications. It's pretty much the whole reason they've been expanding with us this year.
+[00:37:40] speaker 3: Wait, twelve hundred drivers? So a big chunk of our two thousand mobile users is Northwind?
+[00:37:48] speaker 4: More than half, it looks like.
+[00:37:51] speaker 2: Oh no.
+[00:37:52] speaker 1: Well, that changes things.
+[00:37:54] you: Yeah. Yeah, that definitely changes things. Okay. Um, if we tell Northwind, three months before their renewal, right after an outage, that we're shutting down the app their drivers depend on...
+[00:38:09] speaker 4: They walk. I'm pretty confident they walk. And honestly, I wouldn't blame them.
+[00:38:15] speaker 3: Could we carve out an exception? Like, keep it running only for them?
+[00:38:20] speaker 2: Not really. It's the same app in the app stores. It's either up or it's not. I mean, technically we could, but then we're maintaining it anyway, just for one customer, so we're not saving anything.
+[00:38:37] you: Right. Okay. So, um, I think we have to reverse what we said ten minutes ago. We don't sunset the mobile app this year. Instead we put it in maintenance mode. No new features, only security fixes and the OS compatibility updates. And we revisit in Q2, once we understand what Northwind actually needs from it.
+[00:39:02] speaker 2: I'm, I'm sad, but that's the right call. Maintenance mode I can live with.
+[00:39:08] speaker 3: Agreed. And maybe there's a product conversation with Northwind at some point. Like, what do the drivers actually need? Maybe it's just push notifications and one screen.
+[00:39:20] speaker 4: I'd love that. But not before the renewal. Please, not before the renewal.
+[00:39:26] speaker 3: No, no. After.
+[00:39:28] you: Okay, so to be clear, because I want the notes to be clear on this. The sunset on December thirty-first is off. There's no announcement in October. The mobile app goes into maintenance mode, security and compatibility fixes only, and we revisit in Q2. That's the decision.
+[00:39:49] speaker 1: Got it.
+[00:39:50] speaker 2: Got it.
+[00:39:51] you: Okay. Back to Northwind. The credit. What are you thinking, Marcus?
+[00:39:56] speaker 4: So, their contract doesn't technically entitle them to anything, since we didn't breach. But I'd like to offer a service credit of one month. So about fifty-two thousand dollars. It's a lot, I know, but it's small compared to six-twenty in ARR, and it's a gesture. It shows we take it seriously.
+[00:40:20] speaker 1: Is one month standard? What would we normally do?
+[00:40:24] speaker 4: For an actual SLA breach, the contract says ten percent of the monthly fee. So around five thousand. One month is ten times that. It's generous on purpose.
+[00:40:37] speaker 3: Could we do, like, half a month plus something non-financial? A dedicated support channel, or early access to SSO?
+[00:40:46] speaker 4: I thought about that. Honestly, Diane's going to take the number to her CFO, and a number that makes the CFO nod is what gets the renewal through. The non-financial stuff is nice, but it's not going to move her CFO.
+[00:41:05] you: I'm okay with one month. Let's do it. But I want it framed as a goodwill credit, not an SLA credit, because we didn't breach, and I don't want to set a precedent that forty minutes counts as a breach.
+[00:41:23] speaker 4: Totally. That's exactly how I'd frame it.
+[00:41:27] you: Okay, so, decided. Northwind gets a one-month goodwill credit, around fifty-two thousand, applied to their next invoice. I'll get that signed off by Anna in finance by Wednesday, so Marcus can actually put it in front of them.
+[00:41:44] speaker 4: Perfect. And then I'll call Diane on Thursday, walk her through the incident, offer the credit, and confirm the mobile app is staying. I'd rather do it on a call than over email.
+[00:41:59] speaker 1: The customer-facing postmortem will be ready Thursday morning, so you'll have it before the call.
+[00:42:07] speaker 4: Amazing. Thank you.
+[00:42:09] speaker 2: And you can tell her the job that held the lock is already fixed. That's a nice concrete thing to say.
+[00:42:19] speaker 4: Good. I'll use that.
+[00:42:21] you: Okay. We're almost at time. Let me just, uh, quickly go over what I have, so the roadmap doc matches. Migrations on big tables get a lock timeout, platform review, and run off-peak. SSO is SAML with Okta, Enterprise only, beta mid-November. Pricing experiment on ten percent of new signups from October twentieth. Mobile app stays, maintenance mode. On-call goes to split shifts with a secondary from October fifth. And the Northwind credit.
+[00:42:53] speaker 3: And the Aurora thing and the change freeze are parked, right?
+[00:42:58] you: Parked. Both of them. Not decided.
+[00:43:01] speaker 2: For the record.
+[00:43:03] you: For the record. I'll update the Q4 roadmap doc with all of this and share it with the leadership team by Friday.
+[00:43:13] speaker 1: Sounds good.
+[00:43:15] speaker 4: Can you put the Northwind stuff in a separate section? The CEO's going to go straight to it.
+[00:43:24] you: Yeah, good idea. Will do.
+[00:43:27] speaker 2: Priya, good luck with the unpacking.
+[00:43:30] speaker 1: Thanks. The plan is to unpack exactly one box tonight and call it a win.
+[00:43:37] speaker 3: Which box?
+[00:43:39] speaker 1: The one with the coffee maker. Obviously.
+[00:43:43] speaker 4: The only correct answer.
+[00:43:45] speaker 3: And Tom, tell your daughter a semifinal is still really impressive.
+[00:43:51] speaker 2: I'll tell her. She'll say semifinals don't count and then go back to her iPad.
+[00:43:59] speaker 4: Nine-year-olds. Harsh critics.
+[00:44:02] speaker 2: The harshest.
+[00:44:04] speaker 4: Before we go, Willie, are we still doing this same time next week, or does the all-hands move it?
+[00:44:13] you: Same time. The all-hands moved to Wednesday, so we're fine.
+[00:44:19] speaker 4: Great.
+[00:44:21] you: Okay. Thanks, everyone. That was a lot, but I think we landed in a good place. Tom, Priya, thanks again for Tuesday. See you all next week.
+[00:44:34] speaker 2: Thanks, bye.
+[00:44:36] speaker 3: Bye, everyone!
+[00:44:38] speaker 1: Bye.
+[00:44:40] speaker 4: Take care.
