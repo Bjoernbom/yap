@@ -30,6 +30,7 @@ final class OverlayProbe {
 			("listening", .listening),
 			("working", .working),
 			("done", .done),
+			("message", .message("Couldn't type here. It's on your clipboard.")),
 			("recording", .recording(since: .now.addingTimeInterval(-754))),
 		]
 		overlay.holdsDone = true
@@ -117,10 +118,7 @@ final class OverlayProbe {
 	}
 
 	private func write(_ view: NSView, name: String) {
-		guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
-		view.cacheDisplay(in: view.bounds, to: rep)
-		guard let png = rep.representation(using: .png, properties: [:]) else { return }
-		try? png.write(to: directory.appending(path: name))
+		PanelCapture.write(view, to: directory.appending(path: name))
 	}
 
 	private func log(_ line: String) {

@@ -11,6 +11,9 @@ struct OverlayLayout: Equatable, Sendable {
 
 	/// Height of the strip that drops below the notch for dictation.
 	static let strip: CGFloat = 46
+	/// Width of the strip for a one-line message; the longest ones ("That's a
+	/// password field. It's on your clipboard.") fit at 13 pt.
+	static let messageWidth: CGFloat = 340
 	/// Width of each side wing while recording a meeting.
 	static let wing: CGFloat = 72
 	static let shoulder: CGFloat = 7
@@ -36,6 +39,10 @@ struct OverlayLayout: Equatable, Sendable {
 			let width = max((notch?.width ?? 0) + 28, 184)
 			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 20, shoulder: Self.shoulder)
 
+		case .message:
+			let width = max((notch?.width ?? 0) + 28, Self.messageWidth)
+			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 20, shoulder: Self.shoulder)
+
 		case .recording:
 			if let notch {
 				return Spec(size: CGSize(width: notch.width + 2 * Self.wing, height: notch.height), bottomRadius: 12, shoulder: 6)
@@ -46,7 +53,7 @@ struct OverlayLayout: Equatable, Sendable {
 
 	/// The panel is sized once for the largest state; the shape animates inside it.
 	var panelSize: CGSize {
-		let states: [OverlayState] = [.listening, .recording(since: .distantPast)]
+		let states: [OverlayState] = [.listening, .message(""), .recording(since: .distantPast)]
 		let widest = states.map { spec(for: $0).size.width }.max() ?? 0
 		let tallest = states.map { spec(for: $0).size.height }.max() ?? 0
 		return CGSize(width: widest + 2 * Self.shoulder + 2 * Self.overshoot, height: tallest + Self.overshoot)
