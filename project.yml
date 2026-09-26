@@ -116,6 +116,6 @@ targets:
         basedOnDependencyAnalysis: false
         showEnvVarsInLog: false
         script: |
-          if [ "$CONFIGURATION" = Release ] && [ "$CODE_SIGN_IDENTITY" = "-" ]; then
+          if [ "$CONFIGURATION" = Release ] && [ "$CODE_SIGN_IDENTITY" = "-" ] && [ "$CODE_SIGNING_ALLOWED" != NO ]; then
             echo "warning: Release build is AD-HOC signed. Its identity changes every build, so macOS drops Microphone and Accessibility permissions on update. Set YAP_SIGN_IDENTITY (docs/SIGNING.md)."
           fi
