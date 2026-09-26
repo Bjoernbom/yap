@@ -45,6 +45,10 @@ struct MenuContent: View {
 		}
 		.keyboardShortcut(",")
 
+		Button("Set up yap…") {
+			OnboardingOpener.open(model.onboarding, restart: true, with: openWindow)
+		}
+
 		#if DEBUG
 		Divider()
 
@@ -85,6 +89,7 @@ struct MenuContent: View {
 
 enum WindowID {
 	static let history = "history"
+	static let onboarding = "onboarding"
 	#if DEBUG
 	static let tryIt = "try-it"
 	#endif

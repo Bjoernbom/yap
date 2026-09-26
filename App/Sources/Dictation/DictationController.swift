@@ -23,7 +23,7 @@ final class DictationController {
 		static let needsMicrophone = "yap can't hear you yet. Grant access in the menu."
 		static let modelFailed = "Couldn't load the speech model. Trying again."
 		static let nothingToPaste = "Nothing to paste yet."
-		static let gettingReadyPrefix = "Getting ready…"
+		static let gettingReadyPrefix = "Almost ready…"
 
 		static func gettingReady(_ fraction: Double?) -> String {
 			guard let fraction else { return gettingReadyPrefix }
@@ -41,6 +41,12 @@ final class DictationController {
 	private(set) var hotkeyFailed = false
 	/// Bumped whenever history may have changed, so the window reloads.
 	private(set) var historyRevision = 0
+	/// Bumped when a dictation is typed into one of yap's own windows, so
+	/// onboarding's "try it" box knows its text came from the voice.
+	private(set) var ownWindowInsertions = 0
+	/// The last model failure looked like no network: the first download
+	/// needs one, so onboarding says so instead of a generic line.
+	private(set) var modelFailedOffline = false
 
 	@ObservationIgnored private let overlay: OverlayController
 	@ObservationIgnored private let monitor: HotkeyMonitor
@@ -70,7 +76,7 @@ final class DictationController {
 
 	init(overlay: OverlayController) {
 		self.overlay = overlay
-		let saved = UserDefaults.standard.string(forKey: Self.triggerKey).flatMap(HotkeyTrigger.init(rawValue:))
+		let saved = AppDefaults.store.string(forKey: Self.triggerKey).flatMap(HotkeyTrigger.init(rawValue:))
 		let trigger = saved ?? .fn
 		self.trigger = trigger
 		monitor = HotkeyMonitor(trigger: trigger)
@@ -125,9 +131,14 @@ final class DictationController {
 	func setTrigger(_ trigger: HotkeyTrigger) {
 		guard trigger != self.trigger else { return }
 		self.trigger = trigger
-		UserDefaults.standard.set(trigger.rawValue, forKey: Self.triggerKey)
+		AppDefaults.store.set(trigger.rawValue, forKey: Self.triggerKey)
 		monitor.setTrigger(trigger)
 		logStatus()
+	}
+
+	/// Tries the model again after a failed download or load.
+	func retryModel() {
+		prepareModel()
 	}
 
 	func grantAccess() async {
@@ -154,7 +165,7 @@ final class DictationController {
 	/// Re-reads permissions and starts whatever they unlock. Polls while
 	/// something is missing: the user flips the switch in System Settings,
 	/// which activates nothing of ours.
-	private func checkPermissions() {
+	func checkPermissions() {
 		permissions.refresh()
 		if permissions.accessibility, !monitor.isRunning {
 			do {
@@ -196,6 +207,7 @@ final class DictationController {
 
 	private func prepareModel() {
 		guard preparing == nil, modelStatus != .ready else { return }
+		modelFailedOffline = false
 		setModelStatus(.loading(fraction: nil))
 		// FluidAudio reports from its own queue; hop to the main actor.
 		let relay: @Sendable (ModelProgress) -> Void = { [weak self] progress in
@@ -212,18 +224,55 @@ final class DictationController {
 					self?.makeSession(vad: vad)
 				}
 				#if DEBUG
-				let delay = UserDefaults.standard.double(forKey: "YapModelDelay")
-				if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+				try await Self.debugHoldModel(progress: relay)
 				#endif
 				try await engine.prepare(progress: relay)
 				self?.setModelStatus(.ready)
 			} catch {
 				Logger.dictation.error("Model prepare failed: \(String(describing: error), privacy: .public)")
+				self?.modelFailedOffline = Self.isOffline(error)
 				self?.setModelStatus(.failed)
 			}
 			self?.preparing = nil
 		}
 	}
+
+	private static func isOffline(_ error: any Error) -> Bool {
+		var current: NSError? = error as NSError
+		// FluidAudio may wrap the URL error; walk the underlying chain.
+		while let nsError = current {
+			if nsError.domain == NSURLErrorDomain { return true }
+			current = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+		}
+		return false
+	}
+
+	#if DEBUG
+	/// `-YapModelDelay <s>` holds the model back, reporting a fake download
+	/// for the first 80 % of the delay and compiling for the rest, so the
+	/// onboarding progress and "not ready yet" paths can be seen with a
+	/// cached model. `-YapModelFailOnce YES` fails the first attempt as if
+	/// offline, to exercise the retry.
+	private static var debugFailedOnce = false
+
+	private static func debugHoldModel(progress: @escaping @Sendable (ModelProgress) -> Void) async throws {
+		if UserDefaults.standard.bool(forKey: "YapModelFailOnce"), !debugFailedOnce {
+			debugFailedOnce = true
+			try? await Task.sleep(for: .seconds(1.5))
+			throw URLError(.notConnectedToInternet)
+		}
+		let delay = UserDefaults.standard.double(forKey: "YapModelDelay")
+		guard delay > 0 else { return }
+		let start = ContinuousClock.now
+		let total = Duration.seconds(delay)
+		while ContinuousClock.now - start < total {
+			let elapsed = ContinuousClock.now - start
+			let fraction = elapsed / total
+			progress(fraction < 0.8 ? .downloading(fraction: fraction / 0.8) : .compiling)
+			try? await Task.sleep(for: .milliseconds(250))
+		}
+	}
+	#endif
 
 	private func modelProgressed(_ progress: ModelProgress) {
 		// Progress hops here in its own task and can land after `.ready`.
@@ -360,6 +409,9 @@ final class DictationController {
 		case .done(let outcome):
 			logInsertion(outcome)
 			historyChanged()
+			if outcome == .direct {
+				ownWindowInsertions &+= 1
+			}
 			if let message = outcome.message {
 				overlay.show(.message(message))
 			} else {

@@ -13,6 +13,7 @@ struct YapApp: App {
 			MenuContent(model: model)
 		} label: {
 			Image(nsImage: MenuBarIcon.image)
+				.modifier(OnboardingOpener(onboarding: model.onboarding))
 			#if DEBUG
 				.modifier(DebugWindowOpener())
 			#endif
@@ -23,6 +24,15 @@ struct YapApp: App {
 			HistoryView(dictation: model.dictation)
 		}
 		.defaultSize(width: 640, height: 480)
+		.defaultLaunchBehavior(.suppressed)
+		.restorationBehavior(.disabled)
+
+		Window("Set up yap", id: WindowID.onboarding) {
+			OnboardingView(model: model.onboarding)
+		}
+		.windowStyle(.hiddenTitleBar)
+		.windowResizability(.contentSize)
+		.defaultWindowPlacement { _, _ in WindowPlacement(.center) }
 		.defaultLaunchBehavior(.suppressed)
 		.restorationBehavior(.disabled)
 
