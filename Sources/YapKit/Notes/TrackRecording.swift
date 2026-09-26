@@ -8,13 +8,13 @@ import Foundation
 /// The file holds exactly what the transcriber was fed, gap silence
 /// included, so a time in the file is a time in the transcriber's stream and
 /// diarized turns line up with word timings without any mapping.
-final class TrackRecorder {
-	let url: URL
+public final class TrackRecorder {
+	public let url: URL
 	private var handle: FileHandle?
-	private(set) var sampleCount = 0
-	private(set) var failed = false
+	public private(set) var sampleCount = 0
+	public private(set) var failed = false
 
-	init(directory: URL) throws {
+	public init(directory: URL) throws {
 		try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 		url = directory.appending(path: "yap-them-\(UUID().uuidString).pcm")
 		guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
@@ -25,7 +25,7 @@ final class TrackRecorder {
 
 	/// A failed write (disk full) stops recording but never the meeting:
 	/// the note then skips diarization.
-	func append(_ samples: [Float]) {
+	public func append(_ samples: [Float]) {
 		guard let handle, !failed, !samples.isEmpty else { return }
 		// Clamped first: converting NaN or an out-of-range float to an
 		// integer traps.
@@ -39,17 +39,23 @@ final class TrackRecorder {
 		}
 	}
 
-	func close() {
+	public func close() {
 		try? handle?.close()
 		handle = nil
 	}
 
-	func delete() {
+	public func delete() {
 		close()
 		try? FileManager.default.removeItem(at: url)
+		// The folder is ours (yap-notes in the temp directory); leave nothing
+		// behind once it's empty.
+		let directory = url.deletingLastPathComponent()
+		if (try? FileManager.default.contentsOfDirectory(atPath: directory.path))?.isEmpty == true {
+			try? FileManager.default.removeItem(at: directory)
+		}
 	}
 
-	var recording: TrackRecording {
+	public var recording: TrackRecording {
 		TrackRecording(url: url, sampleCount: sampleCount)
 	}
 }

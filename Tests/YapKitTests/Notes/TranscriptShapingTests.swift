@@ -155,15 +155,32 @@ struct SpeakerAssignmentTests {
 
 	@Test func aChunkSpanningATurnChangeIsSplitAndNumberedInOrder() {
 		var assignment = SpeakerAssignment(turns: [
-			SpeakerTurn(speaker: "S7", start: 0, end: 2),
-			SpeakerTurn(speaker: "S3", start: 2.1, end: 5),
+			SpeakerTurn(speaker: "S7", start: 0, end: 2.5),
+			SpeakerTurn(speaker: "S3", start: 2.6, end: 6),
 		])
 		let runs = assignment.split([
-			word("Hello", 0.1, 0.5), word("there.", 0.5, 1.0),
-			word("Hi", 2.2, 2.5), word("Anna.", 2.5, 3.0),
+			word("Hello", 0.1, 0.8), word("there,", 0.8, 1.5), word("everyone.", 1.5, 2.3),
+			word("Hi", 2.8, 3.3), word("Anna,", 3.3, 4.0), word("welcome.", 4.0, 4.8),
 		])
 		#expect(runs.map(\.speaker) == [1, 2])
-		#expect(runs.map { $0.words.map(\.text) } == [["Hello", "there."], ["Hi", "Anna."]])
+		#expect(runs.map { $0.words.map(\.text) } == [["Hello", "there,", "everyone."], ["Hi", "Anna,", "welcome."]])
+	}
+
+	@Test func aShortStretchAtATurnEdgeJoinsItsNeighbour() {
+		// The diarizer starts speaker B's turn a word early.
+		var assignment = SpeakerAssignment(turns: [
+			SpeakerTurn(speaker: "A", start: 0, end: 0.9),
+			SpeakerTurn(speaker: "B", start: 0.9, end: 6),
+		])
+		let runs = assignment.split([
+			word("Morning,", 0.2, 0.8), word("the", 1.0, 1.2), word("beta", 1.2, 1.6),
+			word("has", 1.6, 1.9), word("been", 1.9, 2.2), word("stable.", 2.2, 3.0),
+		])
+		#expect(runs.count == 1)
+		#expect(runs.first?.speaker == 1)
+		#expect(runs.first?.words.count == 6)
+		// A was never shown, so B is speaker 1.
+		#expect(assignment.numbers == ["B": 1])
 	}
 
 	@Test func aWordBetweenTurnsTakesTheNearestOne() {
