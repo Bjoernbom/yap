@@ -298,11 +298,24 @@ def grids_for(make):
 	return grids
 
 
+def hand_tuned(make):
+	"""Sizes whose grid was drawn for that size, edges already on sharp lines."""
+	return {16, 32} if len(make()) > 2 else {16}
+
+
 def images_for(make):
+	"""Hand-tuned grids are point-sampled: their edges already sit where
+	macOS keeps them sharp, and solving would only add ringing (visible at
+	32 pt @1x, which shares the 32 px image). Master grids that macOS
+	resamples at a small size are solved for."""
 	kernels = load_kernels()
+	tuned = hand_tuned(make)
 	out = {}
 	for size, grid in grids_for(make).items():
-		out[size] = solve(grid, size, kernels[size]) if size in kernels else point_sampled(grid, size)
+		if size in kernels and size not in tuned:
+			out[size] = solve(grid, size, kernels[size])
+		else:
+			out[size] = point_sampled(grid, size)
 	return out
 
 
