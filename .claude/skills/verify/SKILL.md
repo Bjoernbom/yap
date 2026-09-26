@@ -203,7 +203,7 @@ timings and the path of the written note.
 ## Idle CPU
 
 ```bash
-ps -o cputime= -p $(pgrep -x yap); sleep 10; ps -o cputime= -p $(pgrep -x yap)
+ps -o cputime= -p $PID; sleep 10; ps -o cputime= -p $PID   # PID = the yap you started
 ```
 
 Expect no change with the notch hidden. While listening it is ~7% (30 fps
@@ -212,6 +212,7 @@ redraw); the shimmer runs at 60 fps. Memory with the model warm:
 
 ## Quit and clean up
 
-Menu: Quit yap. Headless: `pkill -x yap`, then `pgrep -x yap` must print
-nothing. Close any app windows you opened for probing. `make clean` removes
+Menu: Quit yap. Headless: `kill <pid>` for the pid you started (record `$!`),
+then `kill -0 <pid>` must fail. Never `pkill -x yap`: the user's own yap may
+be running and would be quit too. Close any app windows you opened for probing. `make clean` removes
 `build/` and the generated project; do it before removing a worktree.
