@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sparkle feed for yap 1.x (SUFeedURL). The release workflow adds an item
+     per release with scripts/release/update-appcast.sh; don't edit by hand. -->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+	<channel>
+		<title>yap</title>
+		<link>https://github.com/Bjoernbom/yap</link>
+		<description>Updates for yap, push-to-talk dictation for macOS.</description>
+		<language>en</language>
+		<!-- releases, newest first -->
+	</channel>
+</rss>
