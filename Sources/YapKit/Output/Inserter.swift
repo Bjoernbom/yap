@@ -35,8 +35,9 @@ public final class Inserter: TextInserter {
 
 	public init() {}
 
-	// `@concurrent` keeps the AX calls off the caller's actor: an AX call into our own app
-	// from the main thread waits on itself until the messaging timeout.
+	// `@concurrent` keeps the system-wide AX queries off the caller's actor: when one of our
+	// own windows has focus they are answered by our main thread, and asking from the main
+	// thread would wait on itself until the messaging timeout.
 	@concurrent
 	public func captureTarget() async -> FocusTarget? {
 		let focusedApp = AXElement.systemWide.element(kAXFocusedApplicationAttribute)
@@ -44,7 +45,9 @@ public final class Inserter: TextInserter {
 			captured.withLock { $0 = nil }
 			return nil
 		}
-		let element = AXElement.application(pid).element(kAXFocusedUIElementAttribute)
+		let element = await Self.onAXThread(for: pid) {
+			AXElement.application(pid).element(kAXFocusedUIElementAttribute)
+		}
 		captured.withLock { $0 = element.map { Captured(pid: pid, element: $0) } }
 		return FocusTarget(pid: pid, bundleID: NSRunningApplication(processIdentifier: pid)?.bundleIdentifier)
 	}
@@ -55,16 +58,27 @@ public final class Inserter: TextInserter {
 		guard AXIsProcessTrusted() else { return .failed }
 		guard Self.focusedPID() == target.pid else { return .focusChanged }
 
-		let element = AXElement.application(target.pid).element(kAXFocusedUIElementAttribute)
-			?? captured.withLock { $0?.pid == target.pid ? $0?.element : nil }
+		let pid = target.pid
+		let focused = await Self.onAXThread(for: pid) {
+			AXElement.application(pid).element(kAXFocusedUIElementAttribute)
+		}
+		let element = focused ?? captured.withLock { $0?.pid == pid ? $0?.element : nil }
 		if let element {
-			if element.isSecureTextField { return .secureField }
+			if await Self.onAXThread(for: pid, { element.isSecureTextField }) { return .secureField }
 		} else if IsSecureEventInputEnabled() {
 			// We can't see the field, but something turned on secure input: assume a password.
 			return .secureField
 		}
-		if let element, await Self.insertThroughAccessibility(text, into: element) { return .ax }
+		if let element, await Self.insertThroughAccessibility(text, into: element, pid: pid) { return .ax }
 		return await paste(text, into: target)
+	}
+
+	/// AppKit answers AX calls for our own windows in-process, on the calling thread, and its
+	/// text views crash off the main thread. yap's own windows (onboarding's "try it" box) are
+	/// valid targets, so those calls hop to the main actor; calls into other apps stay here.
+	private static func onAXThread<T: Sendable>(for pid: pid_t, _ body: @Sendable () -> T) async -> T {
+		if pid == getpid() { return await MainActor.run { body() } }
+		return body()
 	}
 
 	/// The pid of the app that has keyboard focus right now.
@@ -77,14 +91,20 @@ public final class Inserter: TextInserter {
 
 	/// Sets the field's selected text and checks the value changed. Some apps (Electron,
 	/// some web views, and buttons in M0) report success and ignore the write.
-	private static func insertThroughAccessibility(_ text: String, into element: AXElement) async -> Bool {
-		guard element.isSettable(kAXSelectedTextAttribute) else { return false }
-		let before = element.string(kAXValueAttribute)
-		guard element.set(kAXSelectedTextAttribute, to: text as CFString) == .success else { return false }
+	private static func insertThroughAccessibility(_ text: String, into element: AXElement, pid: pid_t) async -> Bool {
+		// nil: not written. .some(before): written, `before` is the value we compare against.
+		let written: String?? = await onAXThread(for: pid) {
+			guard element.isSettable(kAXSelectedTextAttribute) else { return nil }
+			let before = element.string(kAXValueAttribute)
+			guard element.set(kAXSelectedTextAttribute, to: text as CFString) == .success else { return nil }
+			return .some(before)
+		}
+		guard let before = written else { return false }
 		// A changed value counts, even if it doesn't contain `text` verbatim (formatters,
 		// smart quotes): calling that a failure would paste the text a second time.
 		for attempt in 0..<3 {
-			if let after = element.string(kAXValueAttribute), after != before { return true }
+			let after = await onAXThread(for: pid) { element.string(kAXValueAttribute) }
+			if let after, after != before { return true }
 			if attempt < 2 { try? await Task.sleep(for: .milliseconds(10)) }
 		}
 		return false
