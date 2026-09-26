@@ -24,6 +24,14 @@ settings:
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+  configs:
+    Release:
+      # Strip on a plain `build`, not only on archive/install: the symbol
+      # table is half the binary (16.6 MB -> 8.7 MB). Symbols stay in the dSYM.
+      DEPLOYMENT_POSTPROCESSING: YES
+      STRIP_INSTALLED_PRODUCT: YES
+      STRIP_STYLE: all
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
 
 targets:
   yap:
