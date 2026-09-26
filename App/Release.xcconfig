@@ -1,0 +1,5 @@
+// Release-only settings. Signing identity: put
+//   YAP_SIGN_IDENTITY = yap self-signed (bjornbom)
+// in App/Signing.local.xcconfig (git-ignored) once the certificate is in your
+// keychain, or export YAP_SIGN_IDENTITY. See docs/SIGNING.md.
+#include? "Signing.local.xcconfig"

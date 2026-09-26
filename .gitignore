@@ -19,3 +19,8 @@ models/
 
 # Agent worktrees
 .claude/worktrees/
+
+# Local signing identity for Release builds (docs/SIGNING.md)
+App/Signing.local.xcconfig
+# Release output
+dist/
