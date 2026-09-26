@@ -1,8 +1,12 @@
 # App icon
 
-The yap icon is the notch's pixel waveform: lime dots on black, mirrored
+The icon was lime (`#C8FF3D`) until 1.0's brand pass moved the accent to
+bone (`#D9D4C7`); the concept notes below still say lime where they were
+judged in lime.
+
+The yap icon is the notch's pixel waveform: bone dots on black, mirrored
 around a middle bar, with a dim "quiet" dot at each end, the way a silent bar
-looks in the notch. At 16 pt it becomes three solid lime bars.
+looks in the notch. At 16 pt it becomes three solid bone bars.
 
 Everything here is generated. Don't edit the PNGs by hand.
 
@@ -32,12 +36,12 @@ show them.
 
 ## Why the waveform
 
-- **16 pt legibility.** Three lime bars on black survive at 16 pt. Letters
+- **16 pt legibility.** Three bone bars on black survive at 16 pt. Letters
   don't.
-- **Recognisable.** A lime-on-black mark stands out in the Dock and in the
-  Accessibility list, where most icons are colourful and glossy. It's also
+- **Recognisable.** A bone-on-black mark stands out in the Dock and in the
+  Accessibility list, where most icons are colourful and glossy: it is the quiet one. It's also
   the same thing you see in the notch while you talk.
-- **On brand.** Black, pixels, one accent, and lime used only for its job:
+- **On brand.** Black, pixels, one accent, and bone used only for its job:
   the waveform means listening.
 - **Not too cute.** No face, no mascot, no joke. It reads like a tool.
 
@@ -59,7 +63,7 @@ into the rounded body and masks it:
 | 1024 px | 512 pt @2x | 824 px at offset 100 |
 
 So 8 image pixels become 7 screen pixels at 16 pt, and pixel art drawn on the
-image grid comes out soft. `--measure` renders combs of lime columns through
+image grid comes out soft. `--measure` renders combs of bone columns through
 IconServices and stores the resampling kernel in `kernel.json` (near-bilinear,
 in gamma space). The kernel shows that at 16 pt @2x only edges at body pixels
 6–8, 13–15 and 20–22 stay sharp, and the same pattern repeats every 7 px.

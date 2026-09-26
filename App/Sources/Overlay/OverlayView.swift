@@ -108,7 +108,7 @@ struct OverlayView: View {
 		VStack(spacing: 0) {
 			Color.clear.frame(height: layout.topBand)
 			content()
-				.frame(height: OverlayLayout.strip)
+				.frame(height: layout.strip(for: model.state))
 				// Optical center: the rounded bottom makes true center look low.
 				.offset(y: -1)
 		}

@@ -9,8 +9,12 @@ struct OverlayLayout: Equatable, Sendable {
 		var shoulder: CGFloat
 	}
 
-	/// Height of the strip that drops below the notch for dictation.
-	static let strip: CGFloat = 46
+	/// Height of the strip that drops below the notch while listening, and for
+	/// a message or prompt.
+	static let strip: CGFloat = 34
+	/// Working and done need one row of dots or a small tick, so the notch
+	/// draws back towards the hardware notch once you stop talking.
+	static let compactStrip: CGFloat = 28
 	/// Width of the strip for a one-line message; the longest ones ("That's a
 	/// password field. It's on your clipboard.") fit at 13 pt.
 	static let messageWidth: CGFloat = 340
@@ -35,13 +39,17 @@ struct OverlayLayout: Equatable, Sendable {
 			}
 			return Spec(size: CGSize(width: 150, height: 0), bottomRadius: 0, shoulder: 0)
 
-		case .listening, .working, .done:
-			let width = max((notch?.width ?? 0) + 28, 184)
-			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 20, shoulder: Self.shoulder)
+		case .listening:
+			let width = max((notch?.width ?? 0) + 16, 168)
+			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 16, shoulder: Self.shoulder)
+
+		case .working, .done:
+			let width = max((notch?.width ?? 0) + 8, 152)
+			return Spec(size: CGSize(width: width, height: topBand + Self.compactStrip), bottomRadius: 13, shoulder: Self.shoulder)
 
 		case .message, .prompt:
-			let width = max((notch?.width ?? 0) + 28, Self.messageWidth)
-			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 20, shoulder: Self.shoulder)
+			let width = max((notch?.width ?? 0) + 16, Self.messageWidth)
+			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 16, shoulder: Self.shoulder)
 
 		case .recording:
 			if let notch {
@@ -49,6 +57,11 @@ struct OverlayLayout: Equatable, Sendable {
 			}
 			return Spec(size: CGSize(width: 108, height: geometry.menuBarHeight + 2), bottomRadius: 11, shoulder: 6)
 		}
+	}
+
+	/// Height of the strip below the notch in `state`.
+	func strip(for state: OverlayState) -> CGFloat {
+		spec(for: state).size.height - topBand
 	}
 
 	/// The panel is sized once for the largest state; the shape animates inside it.

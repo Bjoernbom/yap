@@ -15,7 +15,7 @@ struct PixelWaveform: View {
 	let phase: Phase
 
 	static let bars = AudioLevels.count * 2 - 1
-	static let rows = 9
+	static let rows = 7
 	/// Bars are one pixel wide with a one-pixel gap, so they read as bars.
 	static let barPitch: CGFloat = 6
 	private static let foldDuration: TimeInterval = 0.16
@@ -81,8 +81,8 @@ struct PixelWaveform: View {
 			let folded = Int((Double(extent) * (1 - fold)).rounded())
 			// A silent bar is a dim dot, so the line reads as "listening, quiet".
 			let color = extent == 0 && fold == 0
-				? Palette.lime.opacity(0.45)
-				: Palette.lime.mix(with: Palette.ink.opacity(0.22), by: fold)
+				? Palette.bone.opacity(0.45)
+				: Palette.bone.mix(with: Palette.ink.opacity(0.22), by: fold)
 			for row in (center - folded)...(center + folded) {
 				fill(context, bar: bar, row: row, color: color)
 			}
