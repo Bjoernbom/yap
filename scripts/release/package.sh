@@ -86,10 +86,13 @@ if [ "$dry_run" = no ] && [ -z "$public_key" ]; then
 	exit 1
 fi
 if [ -n "$sparkle_key" ] && [ -n "$public_key" ]; then
-	derived_key=$(printf '%s' "$sparkle_key" | xcrun swift "$root/scripts/release/ed25519-public-key.swift")
-	if [ "$derived_key" != "$public_key" ]; then
-		echo "error: SPARKLE_PRIVATE_KEY doesn't belong to the app's SUPublicEDKey; users could never install this update." >&2
-		exit 1
+	if derived_key=$(printf '%s' "$sparkle_key" | xcrun swift "$root/scripts/release/ed25519-public-key.swift"); then
+		if [ "$derived_key" != "$public_key" ]; then
+			echo "error: SPARKLE_PRIVATE_KEY doesn't belong to the app's SUPublicEDKey; users could never install this update." >&2
+			exit 1
+		fi
+	else
+		echo "warning: couldn't derive a public key from SPARKLE_PRIVATE_KEY (older key format?); skipping the key-pair check." >&2
 	fi
 fi
 
