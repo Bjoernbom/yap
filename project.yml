@@ -44,6 +44,11 @@ targets:
       - path: App/Sources
       - path: App/Resources
         buildPhase: resources
+      # Shown in About, so the app and the repository say the same thing.
+      - path: LICENSE
+        buildPhase: resources
+      - path: THIRD_PARTY_NOTICES.md
+        buildPhase: resources
     dependencies:
       - package: YapKit
       - package: Sparkle
