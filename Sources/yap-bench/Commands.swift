@@ -130,7 +130,13 @@ func runStream(_ options: Options) async throws {
 	let chunks = Mutex<[StreamReport.Chunk]>([])
 	let feedStart = Mutex<ContinuousClock.Instant?>(nil)
 	var policy = ChunkPolicy.dictation
-	if let maxChunk = options.maxChunk { policy.maxChunk = maxChunk }
+	if let maxChunk = options.maxChunk {
+		policy.maxChunk = maxChunk
+		// Keep the ceiling's search window well inside the chunk.
+		policy.forceCutWindow = min(policy.forceCutWindow, maxChunk / 3)
+	}
+	if let softChunk = options.softChunk { policy.softChunk = softChunk }
+	if let overlap = options.overlap { policy.overlap = overlap }
 	let transcriber = StreamingTranscriber(engine: engine, vad: vad, policy: policy) { report in
 		let readyAt = feedStart.withLock { $0.map { clock.now - $0 } } ?? .zero
 		chunks.withLock {

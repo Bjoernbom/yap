@@ -9,7 +9,9 @@ let usage = """
 	  stream <audio>              feed a file through StreamingTranscriber like a live mic
 	      --speed <x>             playback speed, 1 = real time (default), 0 = as fast as possible
 	      --piece-ms <ms>         size of each append (default 100)
-	      --max-chunk <s>         chunk ceiling (default 14), to force cuts inside sentences
+	      --max-chunk <s>         chunk ceiling (default 10), to force cuts inside sentences
+	      --soft-chunk <s>        cut at a short dip from this length (default 4)
+	      --overlap <s>           overlap around a cut inside speech (default 1, 0 = none)
 	      --cancel-after <s>      cancel after this much audio (probe)
 	      --finish-twice          call finish() twice (probe)
 	  memory                      idle footprint + Neural Engine memory with the model warm

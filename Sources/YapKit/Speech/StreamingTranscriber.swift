@@ -2,6 +2,11 @@
 /// each chunk goes to the engine as soon as it's cut, so key-up only waits for
 /// the tail (35–55 ms for a 2-minute dictation in the spike).
 ///
+/// A cut that has to fall inside speech (a long chunk with only short pauses)
+/// overlaps its neighbours and keeps each word from the side that heard it
+/// with context, because Parakeet drops words at a chunk edge that runs into
+/// speech. See `ChunkPolicy`.
+///
 /// Two stages run behind `append`, which only hands audio over and returns:
 /// the segmenter scores 256 ms hops and cuts chunks, and the transcriber runs
 /// them through the engine one at a time (chunks are 20–100× faster than real
@@ -92,9 +97,9 @@ public actor StreamingTranscriber: StreamingTranscription {
 		onChunk: (@Sendable (ChunkReport) -> Void)?
 	) async throws -> String {
 		let (chunks, chunkSink) = AsyncStream<SpeechChunk>.makeStream()
-		async let texts = transcribe(chunks, engine: engine, onChunk: onChunk)
+		async let text = transcribe(chunks, engine: engine, onChunk: onChunk)
 		await segment(input, vad: vad, policy: policy, into: chunkSink)
-		let joined = TranscriptJoiner.join(try await texts)
+		let joined = try await text
 		try Task.checkCancellation()
 		return joined
 	}
@@ -137,7 +142,7 @@ public actor StreamingTranscriber: StreamingTranscription {
 	}
 
 	/// A VAD failure must not lose audio: treat the hop as speech, which only
-	/// means no cut here (the 14 s ceiling still applies).
+	/// means no cut here (the ceiling still applies).
 	private static func score(_ hop: [Float], with stream: any VoiceActivityStream) async -> Float {
 		(try? await stream.speechProbability(of: hop)) ?? 1
 	}
@@ -147,8 +152,8 @@ public actor StreamingTranscriber: StreamingTranscription {
 		_ chunks: AsyncStream<SpeechChunk>,
 		engine: any SpeechEngine,
 		onChunk: (@Sendable (ChunkReport) -> Void)?
-	) async throws -> [String] {
-		var texts: [String] = []
+	) async throws -> String {
+		var stitcher = TranscriptStitcher()
 		var index = 0
 		let clock = ContinuousClock()
 		for await chunk in chunks {
@@ -156,14 +161,14 @@ public actor StreamingTranscriber: StreamingTranscription {
 			let start = clock.now
 			let transcript = try await engine.transcribe(chunk.samples)
 			try Task.checkCancellation()
-			texts.append(transcript.text)
+			let text = stitcher.add(transcript, start: chunk.start, keep: chunk.keep)
 			onChunk?(ChunkReport(
 				index: index, duration: chunk.duration,
 				reason: chunk.reason, start: chunk.start,
-				latency: clock.now - start, text: transcript.text))
+				latency: clock.now - start, text: text))
 			index += 1
 		}
 		try Task.checkCancellation()
-		return texts
+		return stitcher.finish()
 	}
 }

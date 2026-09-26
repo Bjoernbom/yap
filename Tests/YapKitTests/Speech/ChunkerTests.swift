@@ -48,7 +48,7 @@ struct ChunkerTests {
 
 	@Test func silenceWithoutSpeechNeverCutsAtAPause() {
 		var chunker = Chunker(policy: .dictation)
-		#expect(feed([Float](repeating: silence, count: 40), into: &chunker).isEmpty)
+		#expect(feed([Float](repeating: silence, count: 38), into: &chunker).isEmpty)
 	}
 
 	@Test func cutsEveryPause() {
@@ -60,31 +60,80 @@ struct ChunkerTests {
 		#expect(chunker.pending.isEmpty)
 	}
 
-	@Test func ceilingCutsAtTheQuietestHopInTheLastFourSeconds() throws {
+	@Test func ceilingCutsAtTheQuietestSpotBeforeTheOverlap() throws {
 		var chunker = Chunker(policy: .dictation)
-		var probabilities = [Float](repeating: speech, count: 60)
-		probabilities[50] = 0.3
-		probabilities[20] = 0.0 // quieter, but outside the 4 s window
-		let chunks = feed(probabilities, into: &chunker)
+		// 39 hops reach the 10 s ceiling; the search window is the 3 s
+		// before the last second.
+		var audio = [Float](repeating: 0.5, count: 39 * hop)
+		// A 40 ms word gap inside the window…
+		audio.replaceSubrange(120_000..<120_640, with: repeatElement(0, count: 640))
+		// …and an equally quiet one outside it, which must not win.
+		audio.replaceSubrange(60_000..<60_640, with: repeatElement(0, count: 640))
+		let chunks = (0..<39).compactMap { index in
+			chunker.push(Array(audio[(index * hop)..<((index + 1) * hop)]), probability: speech)
+		}
 		let chunk = try #require(chunks.first)
+		#expect(chunks.count == 1)
 		#expect(chunk.reason == .ceiling)
-		#expect(hops(in: chunk) == 51)
-		#expect(chunk.samples.last == 50)
-		// The hops after the cut stay pending for the next chunk.
-		#expect(chunker.pending.first == 51)
+		let cut = chunk.keep.upperBound * AudioChunk.sampleRate
+		#expect(cut >= 120_000 && cut <= 120_640)
+		// The chunk runs a second past the cut, and the next one starts a
+		// second before it and keeps only what follows the cut.
+		#expect(abs(chunk.duration - (chunk.keep.upperBound + 1)) < 0.001)
+		#expect(chunk.duration <= ChunkPolicy.dictation.maxChunk)
+		#expect(chunker.keepFrom == 16_000)
+		#expect(chunker.pending.count == 39 * hop - (Int(cut) - 16_000))
 	}
 
-	@Test func chunksNeverExceedTheCeiling() {
+	@Test func cutsInsideSpeechCoverEverySampleExactlyOnce() throws {
 		var chunker = Chunker(policy: .dictation)
-		let chunks = feed([Float](repeating: speech, count: 400), into: &chunker)
-		#expect(!chunks.isEmpty)
+		var chunks = feed([Float](repeating: speech, count: 400), into: &chunker)
+		let result = chunker.finish(remainder: [Float](repeating: 1, count: 100), probability: speech)
+		let tail = try #require(result)
+		chunks.append(tail)
+		#expect(chunks.count > 2)
+		// In stream time, each chunk's own part starts where the previous ended.
+		var covered = 0.0
 		for chunk in chunks {
 			#expect(chunk.duration <= ChunkPolicy.dictation.maxChunk)
-			#expect(chunk.reason == .ceiling)
+			#expect(abs(chunk.start + chunk.keep.lowerBound - covered) < 0.0001)
+			covered = chunk.start + min(chunk.keep.upperBound, chunk.duration)
 		}
-		// Nothing is lost or duplicated across forced cuts.
-		let total = chunks.reduce(0) { $0 + $1.samples.count } + chunker.pending.count
-		#expect(total == 400 * hop)
+		#expect(abs(covered - Double(400 * hop + 100) / AudioChunk.sampleRate) < 0.0001)
+		// The samples themselves line up with the stream: hop `i` holds `i`.
+		for chunk in chunks.dropLast() {
+			let first = Int((chunk.start * AudioChunk.sampleRate).rounded())
+			#expect(chunk.samples.first == Float(first / hop))
+		}
+	}
+
+	@Test func longChunkCutsAtAShortDipWithOverlap() throws {
+		var chunker = Chunker(policy: .dictation)
+		var probabilities = [Float](repeating: speech, count: 30)
+		// A dip at 2.3 s is too early; the one ending at 5.4 s cuts once a
+		// second of audio has followed it.
+		probabilities[8] = 0.3
+		probabilities[20] = 0.3
+		var chunks: [SpeechChunk] = []
+		var cutAt: Int?
+		for (index, probability) in probabilities.enumerated() {
+			if let chunk = chunker.push([Float](repeating: 1, count: hop), probability: probability) {
+				chunks.append(chunk)
+				cutAt = index
+			}
+		}
+		let chunk = try #require(chunks.first)
+		#expect(chunks.count == 1)
+		#expect(chunk.reason == .dip)
+		#expect(cutAt == 24)
+		let cut = chunk.keep.upperBound * AudioChunk.sampleRate
+		#expect(cut >= Double(20 * hop) && cut < Double(21 * hop))
+		#expect(chunker.keepFrom == 16_000)
+	}
+
+	@Test func dipsNeverCutSilence() {
+		var chunker = Chunker(policy: .dictation)
+		#expect(feed([Float](repeating: 0.3, count: 38), into: &chunker).isEmpty)
 	}
 
 	@Test func shortChunksArePaddedToOneSecond() throws {
@@ -122,16 +171,16 @@ struct TailTests {
 		#expect(abs(tail.duration - 3000.0 / 16_000) < 0.0001)
 	}
 
-	@Test func shortTailStillInsideSpeechIsKept() throws {
+	@Test func tailAfterACutInsideSpeechKeepsOnlyWhatFollowsTheCut() throws {
 		var chunker = Chunker(policy: .dictation)
-		// A forced cut mid-word leaves VAD triggered; the tail continues that word.
-		// The last hop is the quietest (but not silent), so the cut takes everything.
-		let chunks = feed([Float](repeating: speech, count: 53) + [0.75], into: &chunker)
-		#expect(chunks.map(\.reason) == [.ceiling])
-		#expect(chunker.pending.isEmpty)
+		let chunks = feed([Float](repeating: speech, count: 39), into: &chunker)
+		let cut = try #require(chunks.first)
+		#expect(cut.reason == .ceiling)
 		let result = chunker.finish(remainder: [Float](repeating: 1, count: 1000), probability: silence)
 		let tail = try #require(result)
-		#expect(tail.samples.count >= 16_000)
+		#expect(tail.reason == .tail)
+		#expect(tail.keep.lowerBound == 1)
+		#expect(abs(tail.start + tail.keep.lowerBound - cut.start - cut.keep.upperBound) < 0.0001)
 	}
 
 	@Test func silentTailOfAtLeastMinTailIsTranscribed() throws {
