@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: macos-26
@@ -12,3 +16,47 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and test YapKit
         run: swift test
+
+  # The app target and the whole release path, signed with a throwaway
+  # self-signed certificate: catches app build breakage and signing
+  # regressions without any secrets.
+  app:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the build number is the commit count
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Throwaway signing certificate in a temporary keychain
+        id: cert
+        run: |
+          scripts/signing/make-certificate.sh "$RUNNER_TEMP/cert"
+          identity=$(scripts/signing/ci-keychain.sh "$RUNNER_TEMP/cert/yap-signing.p12" "$(cat "$RUNNER_TEMP/cert/yap-signing.password")")
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
+      - name: Signing probe (experiment)
+        continue-on-error: true
+        env:
+          IDENTITY: ${{ steps.cert.outputs.identity }}
+        run: |
+          cp /bin/ls "$RUNNER_TEMP/ls-copy"
+          if codesign --force --timestamp=none -s "$IDENTITY" "$RUNNER_TEMP/ls-copy"; then
+            echo "UNTRUSTED identity signs fine"
+          else
+            echo "untrusted identity fails; trying admin trust"
+            sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$RUNNER_TEMP/cert/yap-signing.cer.pem"
+            security find-identity -v -p codesigning
+            codesign --force --timestamp=none -s "$IDENTITY" "$RUNNER_TEMP/ls-copy"
+          fi
+          codesign -d -r- "$RUNNER_TEMP/ls-copy"
+      - name: Build, sign and package (dry run)
+        env:
+          YAP_SIGN_IDENTITY: ${{ steps.cert.outputs.identity }}
+        run: scripts/release/package.sh --dry-run
+      - name: Designated requirement is anchored to the certificate
+        run: |
+          codesign -d -r- build/release/Build/Products/Release/yap.app 2>&1 | tee requirement.txt
+          grep -Eq 'certificate (leaf|root) = H"' requirement.txt
+          if grep -q cdhash requirement.txt; then exit 1; fi
+          codesign --verify --deep --strict --verbose=2 build/release/Build/Products/Release/yap.app
+          ls -l dist
