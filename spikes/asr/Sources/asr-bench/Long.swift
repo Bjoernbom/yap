@@ -23,14 +23,14 @@ func runLong(_ options: Options) async throws {
 	let clips = try Dataset.load("sv_se")
 	var samples: [Float] = []
 	var references: [String] = []
-	for clip in clips {
+	for clip in clips.dropFirst(options.offset) {
 		samples += clip.samples
 		references.append(clip.reference)
 		if samples.count >= 120 * sampleRate { break }
 	}
 	let reference = references.joined(separator: " ")
 	let audioSeconds = Double(samples.count) / Double(sampleRate)
-	print("long clip: \(references.count) FLEURS sv utterances, \(fmt(audioSeconds, 1)) s, \(TextNormalizer.words(reference, normalized: true).count) words")
+	print("long clip: \(references.count) FLEURS sv utterances from #\(options.offset), \(fmt(audioSeconds, 1)) s, \(TextNormalizer.words(reference, normalized: true).count) words")
 
 	let (engine, _) = try await Engine.load(options.model)
 	_ = try await engine.transcribe(clips[0].samples)
@@ -131,7 +131,8 @@ func simulateStreaming(
 			position = end
 			hops.append((end, probability))
 			let pending = Double(position - segmentStart) / Double(sampleRate)
-			if let event = result.event, event.isEnd, pending >= strategy.minChunk {
+			// A cut on the very last hop is the release itself; leave it to the final flush.
+			if let event = result.event, event.isEnd, pending >= strategy.minChunk, position < samples.count {
 				try await transcribe(segmentStart..<position)
 				segmentStart = position
 				hops.removeAll()

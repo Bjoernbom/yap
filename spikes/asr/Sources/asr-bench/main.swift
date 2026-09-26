@@ -1,7 +1,7 @@
 import Foundation
 
 let usage = """
-	usage: asr-bench <command> [--model v3|ultra] [--lang sv_se|en_us|codeswitch] [--hint sv|en] [--file path] [--terms a,b]
+	usage: asr-bench <command> [--model v3|ultra] [--lang sv_se|en_us|codeswitch] [--hint sv|en] [--file path] [--terms a,b] [--offset n]
 
 	  download    fetch the ASR model and the Silero VAD into .local/Models
 	  load        load time, first-call latency, memory idle/after unload

@@ -8,6 +8,7 @@ struct Options {
 	var hint: Language?
 	var file: String?
 	var terms: [String] = []
+	var offset = 0
 
 	init(_ arguments: ArraySlice<String>) throws {
 		var iterator = arguments.makeIterator()
@@ -22,6 +23,7 @@ struct Options {
 				guard let language = Language(rawValue: value) else { throw BenchError.usage("unknown language \(value)") }
 				hint = language
 			case "--file": file = value
+			case "--offset": offset = Int(value) ?? 0
 			case "--terms": terms = value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
 			default: throw BenchError.usage("unknown flag \(flag)")
 			}
