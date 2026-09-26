@@ -62,6 +62,9 @@ struct MenuContent: View {
 			Button("Done") { model.demo.show(.done) }
 			Button("Recording") { model.demo.show(.recording(since: .now)) }
 			Button("Hide overlay") { model.demo.show(.hidden) }
+			Divider()
+			Button("Record system audio (5 s)") { NotesProbe.shared.recordFromMenu() }
+			Button(NotesProbe.shared.isWatchingCalls ? "Stop watching for calls" : "Watch for calls") { NotesProbe.shared.toggleCallWatch() }
 		}
 		#endif
 
