@@ -9,10 +9,12 @@ enum MenuBarIcon {
 	/// Retina displays (3 px), which is what makes it look sharp.
 	private static let unit: CGFloat = 1.5
 
-	/// Rows top to bottom. Rows 0–3 are the x-height, 4–5 the descenders.
+	/// Rows top to bottom. Rows 0–4 are the x-height, 5–6 the descenders.
+	private static let xHeight = 5
 	private static let glyphs: [[String]] = [
 		// y
 		["#..#",
+		 "#..#",
 		 "#..#",
 		 "#..#",
 		 ".###",
@@ -20,13 +22,15 @@ enum MenuBarIcon {
 		 "###."],
 		// a
 		[".##.",
-		 "#..#",
+		 "...#",
+		 ".###",
 		 "#..#",
 		 ".###",
 		 "....",
 		 "...."],
 		// p
 		["###.",
+		 "#..#",
 		 "#..#",
 		 "#..#",
 		 "###.",
@@ -39,8 +43,9 @@ enum MenuBarIcon {
 		let spacing = 1
 		let columns = glyphs.count * glyphWidth + (glyphs.count - 1) * spacing
 		let size = NSSize(width: CGFloat(columns) * unit, height: 16)
-		// Center the x-height, not the whole glyph, so it sits like text.
-		let top = (size.height - 4 * unit) / 2 - unit
+		// Center the x-height, not the whole glyph, so it sits like text,
+		// snapped to the pixel grid.
+		let top = ((size.height - CGFloat(xHeight) * unit) / 2 / unit).rounded() * unit
 
 		let image = NSImage(size: size, flipped: true) { _ in
 			NSColor.black.setFill()
