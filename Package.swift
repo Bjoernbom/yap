@@ -20,6 +20,14 @@ let package = Package(
 				.product(name: "GRDB", package: "GRDB.swift"),
 			]
 		),
+		// Benchmark CLI for the plan's section 6 budgets: latency and memory.
+		.executableTarget(
+			name: "yap-bench",
+			dependencies: [
+				"YapKit",
+				.product(name: "FluidAudio", package: "FluidAudio"),
+			]
+		),
 		.testTarget(name: "YapKitTests", dependencies: ["YapKit"]),
 		// Dev harness: exercises the real MicCapture on this Mac (latency, levels, probes).
 		.executableTarget(name: "yap-harness-mic", dependencies: ["YapKit"]),
