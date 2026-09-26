@@ -36,7 +36,7 @@ struct YapApp: App {
 		#endif
 
 		Settings {
-			SettingsView(dictation: model.dictation)
+			SettingsView(dictation: model.dictation, text: model.text)
 		}
 	}
 }
