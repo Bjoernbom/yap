@@ -24,6 +24,13 @@ struct Options {
 	var keepWarm: Double?
 	/// Seconds to wait between warm-up and the measured call.
 	var idle: Double?
+	/// `text`: the focused app's bundle id, which picks the style.
+	var app: String?
+	var style: WritingStyle?
+	var allStyles = false
+	var polish = false
+	/// `text`: a JSON array of dictionary entries.
+	var dictionaryPath: String?
 
 	init(_ arguments: [String]) throws {
 		var rest = arguments[...]
@@ -38,6 +45,14 @@ struct Options {
 			case "--json": json = true
 			case "--finish-twice": finishTwice = true
 			case "--concurrent": concurrent = true
+			case "--all-styles": allStyles = true
+			case "--polish": polish = true
+			case "--app": app = try value()
+			case "--dictionary": dictionaryPath = try value()
+			case "--style":
+				let name = try value()
+				guard let style = WritingStyle(rawValue: name) else { throw BenchError.usage("unknown style \(name)") }
+				self.style = style
 			case "--model":
 				let name = try value()
 				guard let model = ParakeetModel(rawValue: name) else { throw BenchError.usage("unknown model \(name)") }
