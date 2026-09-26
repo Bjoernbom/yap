@@ -272,6 +272,7 @@ final class DictationController {
 	/// Only presses made while everything is ready reach the session; the rest
 	/// get a notch line instead of silently doing nothing.
 	private func handle(_ action: HotkeyAction) async {
+		Logger.dictation.debug("Hotkey \(String(describing: action), privacy: .public)")
 		switch action {
 		case .start:
 			if let blocker = startBlocker() {
