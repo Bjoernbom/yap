@@ -11,9 +11,12 @@ public enum HotkeyMonitorError: Error, Sendable, Equatable {
 	case tapUnavailable
 }
 
-/// Watches the push-to-talk key system-wide with an active `CGEventTap` on its own thread.
+/// Watches the push-to-talk key system-wide with active `CGEventTap`s on their own thread.
 ///
-/// The tap is active (not listen-only) so it can swallow Esc when Esc cancels a dictation.
+/// Two taps, so ordinary typing never passes through yap: the modifier tap only sees
+/// `flagsChanged` and is always on; the key tap sees `keyDown`/`keyUp` and is enabled only
+/// while the trigger is held or a dictation is listening (Esc, chords). Both are active (not
+/// listen-only) so Esc can be swallowed when it cancels a dictation.
 /// Call `start()` once; `actions()` streams can be taken before or after.
 public final class HotkeyMonitor: HotkeySource {
 	/// CF handles are not `Sendable`, but the calls made on them across threads here
@@ -27,6 +30,12 @@ public final class HotkeyMonitor: HotkeySource {
 		var continuations: [Int: AsyncStream<HotkeyAction>.Continuation] = [:]
 		var nextID = 0
 		var tap: Handle<CFMachPort>?
+		var keyTap: Handle<CFMachPort>?
+		var keyTapEnabled = false
+		/// Consecutive `tapDisabledByTimeout`s without a quiet minute in between.
+		var timeouts = 0
+		var lastTimeout: Duration?
+		var paused = false
 		var runLoop: Handle<CFRunLoop>?
 		var tickTimer: Handle<CFRunLoopTimer>?
 	}
@@ -49,6 +58,16 @@ public final class HotkeyMonitor: HotkeySource {
 	/// (it may become a double-tap), so this is how the UI tells a hold from a tap in flight.
 	public var isTriggerHeld: Bool {
 		shared.withLock { $0.interpreter.triggerHeld }
+	}
+
+	/// macOS disabled a tap for being slow and yap is waiting before turning it back on.
+	public var isPaused: Bool {
+		shared.withLock { $0.paused }
+	}
+
+	/// Whether the key tap is intercepting keyDown/keyUp right now (tests and verification).
+	public var isKeyTapEnabled: Bool {
+		shared.withLock { $0.keyTapEnabled }
 	}
 
 	public func actions() -> AsyncStream<HotkeyAction> {
@@ -93,23 +112,27 @@ public final class HotkeyMonitor: HotkeySource {
 
 	/// Removes the tap. A dictation in progress is cancelled; open streams stay open.
 	public func stop() {
-		let (tap, runLoop, timer, wasListening, continuations) = shared.withLock { state in
+		let (tap, keyTap, runLoop, timer, wasListening, continuations) = shared.withLock { state in
 			let result = (
-				state.tap, state.runLoop, state.tickTimer,
+				state.tap, state.keyTap, state.runLoop, state.tickTimer,
 				state.interpreter.machine.isListening, Array(state.continuations.values)
 			)
 			state.tap = nil
+			state.keyTap = nil
+			state.keyTapEnabled = false
+			state.paused = false
+			state.timeouts = 0
 			state.runLoop = nil
 			state.tickTimer = nil
 			state.interpreter = HotkeyEventInterpreter(trigger: state.interpreter.trigger)
 			return result
 		}
 		if let timer { CFRunLoopTimerInvalidate(timer.value) }
-		if let tap {
-			CGEvent.tapEnable(tap: tap.value, enable: false)
+		for port in [tap, keyTap].compactMap({ $0 }) {
+			CGEvent.tapEnable(tap: port.value, enable: false)
 			// Invalidating the port also removes its source, so the run loop has nothing left and
 			// returns even if `CFRunLoopStop` lands before the thread entered `CFRunLoopRun`.
-			CFMachPortInvalidate(tap.value)
+			CFMachPortInvalidate(port.value)
 		}
 		if let runLoop { CFRunLoopStop(runLoop.value) }
 		if wasListening { continuations.forEach { $0.yield(.cancel) } }
@@ -118,19 +141,25 @@ public final class HotkeyMonitor: HotkeySource {
 	// MARK: - Tap thread
 
 	private func runTapThread(ready: DispatchSemaphore) {
-		guard let tap = Self.makeTap(userInfo: Unmanaged.passUnretained(self).toOpaque()),
+		let userInfo = Unmanaged.passUnretained(self).toOpaque()
+		guard let tap = Self.makeTap(mask: Self.modifierMask, userInfo: userInfo),
+			let keyTap = Self.makeTap(mask: Self.keyMask, userInfo: userInfo),
 			let runLoop = CFRunLoopGetCurrent()
 		else {
 			ready.signal()
 			return
 		}
-		let source = CFMachPortCreateRunLoopSource(nil, tap, 0)
-		CFRunLoopAddSource(runLoop, source, .commonModes)
+		for port in [tap, keyTap] {
+			CFRunLoopAddSource(runLoop, CFMachPortCreateRunLoopSource(nil, port, 0), .commonModes)
+		}
 		CGEvent.tapEnable(tap: tap, enable: true)
-		let handles = (Handle(value: tap), Handle(value: runLoop))
+		// Off until the trigger goes down: idle typing never reaches yap.
+		CGEvent.tapEnable(tap: keyTap, enable: false)
+		let handles = (Handle(value: tap), Handle(value: keyTap), Handle(value: runLoop))
 		shared.withLock { state in
 			state.tap = handles.0
-			state.runLoop = handles.1
+			state.keyTap = handles.1
+			state.runLoop = handles.2
 		}
 		ready.signal()
 		CFRunLoopRun()
@@ -139,11 +168,11 @@ public final class HotkeyMonitor: HotkeySource {
 	/// Built in a `nonisolated` static function on purpose: a callback closure written inside
 	/// actor-isolated code inherits that isolation and traps when the tap thread calls it
 	/// (the Swift 6 trap from spike M0-IO).
-	private nonisolated static func makeTap(userInfo: UnsafeMutableRawPointer) -> CFMachPort? {
-		let mask: CGEventMask = (1 << CGEventType.flagsChanged.rawValue)
-			| (1 << CGEventType.keyDown.rawValue)
-			// keyUp too: swallowing a keyDown without its keyUp leaks a stray release to the app.
-			| (1 << CGEventType.keyUp.rawValue)
+	private static let modifierMask: CGEventMask = 1 << CGEventType.flagsChanged.rawValue
+	// keyUp too: swallowing a keyDown without its keyUp leaks a stray release to the app.
+	private static let keyMask: CGEventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
+
+	private nonisolated static func makeTap(mask: CGEventMask, userInfo: UnsafeMutableRawPointer) -> CFMachPort? {
 		let callback: CGEventTapCallBack = { _, type, event, userInfo in
 			guard let userInfo else { return Unmanaged.passUnretained(event) }
 			let monitor = Unmanaged<HotkeyMonitor>.fromOpaque(userInfo).takeUnretainedValue()
@@ -165,9 +194,12 @@ public final class HotkeyMonitor: HotkeySource {
 		let pass = Unmanaged.passUnretained(event)
 		let kind: HotkeyEventInterpreter.Kind
 		switch type {
-		case .tapDisabledByTimeout, .tapDisabledByUserInput:
-			// The system turns off a tap it thinks is slow. Without this the hotkey dies silently.
-			if let tap = shared.withLock({ $0.tap }) { CGEvent.tapEnable(tap: tap.value, enable: true) }
+		case .tapDisabledByTimeout:
+			backOffAfterTimeout()
+			return pass
+		case .tapDisabledByUserInput:
+			// Secure input and the like: not our slowness, so come straight back.
+			reenableTaps()
 			return pass
 		case .flagsChanged: kind = .flagsChanged
 		case .keyDown: kind = .keyDown
@@ -184,10 +216,51 @@ public final class HotkeyMonitor: HotkeySource {
 			return (output, state.interpreter.machine.deadline, output.actions.isEmpty ? [] : Array(state.continuations.values))
 		}
 		scheduleTick(at: deadline, now: now)
+		updateKeyTap()
 		for action in output.actions {
 			continuations.forEach { $0.yield(action) }
 		}
 		return output.swallow ? nil : pass
+	}
+
+	/// The key tap only needs to see keys while the trigger is down or a dictation listens.
+	private func updateKeyTap() {
+		let change: (Handle<CFMachPort>, Bool)? = shared.withLock { state in
+			let wanted = !state.paused && (state.interpreter.triggerHeld || state.interpreter.machine.isListening)
+			guard wanted != state.keyTapEnabled, let keyTap = state.keyTap else { return nil }
+			state.keyTapEnabled = wanted
+			return (keyTap, wanted)
+		}
+		if let (keyTap, enable) = change { CGEvent.tapEnable(tap: keyTap.value, enable: enable) }
+	}
+
+	/// macOS turns off a tap it thinks is slow. Turning it straight back on would put a slow
+	/// tap back in front of every keystroke, so wait, longer each time it happens again:
+	/// 1 s, 2 s, 4 s … up to 30 s. A quiet minute resets the count.
+	private func backOffAfterTimeout() {
+		let now = Self.now()
+		let (delay, keyTap) = shared.withLock { state in
+			if let last = state.lastTimeout, now - last > .seconds(60) { state.timeouts = 0 }
+			state.timeouts += 1
+			state.lastTimeout = now
+			state.paused = true
+			state.keyTapEnabled = false
+			return (min(30.0, pow(2.0, Double(state.timeouts - 1))), state.keyTap)
+		}
+		if let keyTap { CGEvent.tapEnable(tap: keyTap.value, enable: false) }
+		let timer = CFRunLoopTimerCreateWithHandler(nil, CFAbsoluteTimeGetCurrent() + delay, 0, 0, 0) { [weak self] _ in
+			self?.reenableTaps()
+		}
+		if let timer { CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, .commonModes) }
+	}
+
+	private func reenableTaps() {
+		let tap = shared.withLock { state in
+			state.paused = false
+			return state.tap
+		}
+		if let tap { CGEvent.tapEnable(tap: tap.value, enable: true) }
+		updateKeyTap()
 	}
 
 	/// A stray tap only turns into `.cancel` when its double-tap window runs out, which no key
@@ -220,6 +293,7 @@ public final class HotkeyMonitor: HotkeySource {
 		// The run-loop timer uses wall-clock time and may fire a hair before the monotonic
 		// deadline; re-arm so a pending tap can never get stuck.
 		scheduleTick(at: deadline, now: now)
+		updateKeyTap()
 		for action in output.actions {
 			continuations.forEach { $0.yield(action) }
 		}
