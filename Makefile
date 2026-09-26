@@ -17,7 +17,7 @@ app: project
 		-quiet build
 
 run: app
-	-pkill -x yap
+	@pkill -x yap || true
 	open $(APP)
 
 clean:
