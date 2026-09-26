@@ -67,14 +67,9 @@ It finds the newest yap 1.x release, checks its SHA-256, moves yap to
 `/Applications` and opens it. The script is short;
 [read it first](scripts/install.sh) if you like.
 
-**Homebrew:**
-
-```sh
-brew install --cask bjoernbom/tap/yap
-```
-
-**DMG:** download it from [Releases](https://github.com/Bjoernbom/yap/releases)
-and drag yap to Applications. yap isn't notarized, so the first launch is
+**DMG:** [download the latest yap](https://github.com/Bjoernbom/yap/releases/latest/download/yap.dmg) and drag it to Applications.
+Older versions and release notes are under
+[Releases](https://github.com/Bjoernbom/yap/releases). yap isn't notarized, so the first launch is
 blocked once. Open System Settings → Privacy & Security, scroll to Security
 and click **Open Anyway**:
 
