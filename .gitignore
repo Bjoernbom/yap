@@ -16,3 +16,6 @@ App/yap.entitlements
 models/
 *.wav
 !Tests/**/Fixtures/*.wav
+
+# Agent worktrees
+.claude/worktrees/
