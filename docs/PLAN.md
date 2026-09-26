@@ -225,11 +225,10 @@ keep Developer ID as a drop-in upgrade (CI secrets only, no code changes).
 - **Diagnostics without telemetry:** local log + "Copy diagnostics" button that
   produces a text blob users can paste into a GitHub issue.
 - **Bundle id:** `com.bjornbom.yap` (0.4 used `com.voicething.app`).
-- **Migrating 0.4 users:** 0.4's Tauri updater reads `latest.json` from the
-  latest GitHub release. Spike whether it can install the new bundle directly;
-  otherwise ship a last 0.4.x that shows a one-line "yap 1.0 is out" banner.
-  Until then, 1.0 pre-releases are marked as GitHub *pre-releases* so 0.4 users
-  are never affected.
+- **Migrating 0.4 users:** not automated. 1.0 is the latest GitHub release
+  and doesn't ship 0.4's `latest.json`, so 0.4 stops seeing updates and its
+  few users install 1.0 by hand. Decided at the 1.0 release: the permanent
+  `releases/latest/download/yap.dmg` link was worth more than a migration path.
 
 ## 9. Milestones
 
