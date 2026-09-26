@@ -54,12 +54,23 @@ struct PreparedPolish: Sendable {
 
 	func polish(_ text: String, vocabulary: [String] = []) async throws -> String {
 		let prompt = PolishPrompts.prompt(text: text, language: language, vocabulary: vocabulary)
+		let result: String
 		switch output {
 		case .plain:
-			return try await session.respond(to: prompt, options: Self.options).content
+			result = try await session.respond(to: prompt, options: Self.options).content
 		case .guided:
-			return try await session.respond(to: prompt, generating: PolishedText.self, options: Self.options).content.text
+			result = try await session.respond(to: prompt, generating: PolishedText.self, options: Self.options).content.text
 		}
+		return Self.unwrap(result)
+	}
+
+	/// The prompt quotes the transcript, so the model may echo the quotes back.
+	static func unwrap(_ text: String) -> String {
+		let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+		for (open, close) in [("\"", "\""), ("“", "”"), ("”", "”")] where trimmed.count > 1 && trimmed.hasPrefix(open) && trimmed.hasSuffix(close) {
+			return String(trimmed.dropFirst().dropLast()).trimmingCharacters(in: .whitespaces)
+		}
+		return trimmed
 	}
 }
 
