@@ -206,6 +206,14 @@ func runSystemTap(_ args: Args) {
 		let url2 = localDir.appendingPathComponent("tap-only-afplay.wav")
 		let r2 = captureTap(.only([afObject]), seconds: 1.0, url: url2)
 		report("tap only afplay (object \(afObject))", r2, url: url2)
+		// Same afplay still playing: a global tap that excludes afplay and every other process
+		// currently producing output (e.g. a browser playing music) should be silent.
+		let others = audioProcesses().filter { $0.output && $0.object != afObject }
+		print("    other processes with output running: \(others.map { "\(processName($0.pid)) (\($0.bundleID))" })")
+		let url2b = localDir.appendingPathComponent("tap-exclude-afplay.wav")
+		let excluded = [afObject] + others.map(\.object) + (selfObject.map { [$0] } ?? [])
+		let r2b = captureTap(.globalExcluding(excluded), seconds: 0.8, url: url2b)
+		report("global tap excluding afplay + other outputs (expect silent)", r2b, url: url2b)
 	} else {
 		print("  afplay never showed up as an audio process object")
 	}

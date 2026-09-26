@@ -326,9 +326,15 @@ func runHotkey(_ args: Args) {
 			print("-- synthetic: hold Fn + Esc (swallowed by the active tap)")
 			postFlags(kVK_Function, .maskSecondaryFn); wait(0.2); postKey(kVK_Escape); wait(0.1)
 			postFlags(kVK_Function, []); wait(0.1)
+			print("-- synthetic: hold Fn + press A (chord, swallowed by the active tap)")
+			postFlags(kVK_Function, .maskSecondaryFn); wait(0.2); postKey(kVK_ANSI_A); wait(0.1)
+			postFlags(kVK_Function, []); wait(0.1)
+			print("-- synthetic: triple-tap within the window (lock, then stop)")
+			for _ in 0..<3 { postFlags(kVK_Function, .maskSecondaryFn); wait(0.05); postFlags(kVK_Function, []); wait(0.08) }
+			wait(0.5)
 		}
 		let want: [HotkeyStateMachine.Action] = [.start, .stop, .start, .lock, .stop, .start, .stop, .start, .cancel]
-			+ (active ? [.start, .cancel] : [])
+			+ (active ? [.start, .cancel, .start, .cancel, .start, .lock, .stop] : [])
 		print("  actions: \(tap.actions)")
 		print("  RESULT: \(tap.actions == want ? "PASS" : "MISMATCH (want \(want))")")
 	} else {
