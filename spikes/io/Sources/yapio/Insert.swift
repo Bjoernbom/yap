@@ -146,18 +146,18 @@ func runInsert(_ args: Args) {
 	let textEditWasRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.TextEdit").isEmpty
 	let file = localDir.appendingPathComponent("insert-test.txt")
 	try? "yap insert test\n".write(to: file, atomically: true, encoding: .utf8)
-	_ = Children.shared.launch("/usr/bin/open", ["-a", "TextEdit", file.path])
-	let ready = runLoop(for: 8) {
-		NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.TextEdit"
-			&& focusedField().0?.role == kAXTextAreaRole as String
+	// -g: open in the background so we do not steal focus for the AX part.
+	_ = Children.shared.launch("/usr/bin/open", ["-g", "-a", "TextEdit", file.path])
+	var field: FocusedField?
+	runLoop(for: 8) {
+		field = textEditField()
+		return field?.role == kAXTextAreaRole as String
 	}
-	guard ready, let field = focusedField().0,
-		let textEdit = NSRunningApplication(processIdentifier: field.pid), textEdit.bundleIdentifier == "com.apple.TextEdit"
-	else {
-		print("  RESULT: TextEdit text area never became focused; aborting (nothing posted)")
+	guard let field, field.role == kAXTextAreaRole as String else {
+		print("  RESULT: could not find TextEdit's focused text area via AX; aborting (nothing posted)")
 		return
 	}
-	print("  focused: pid \(field.pid) role \(field.role) subrole '\(field.subrole)' secure=\(field.isSecure)")
+	print("  TextEdit field (app-level focus, app in background): pid \(field.pid) role \(field.role) subrole '\(field.subrole)' secure=\(field.isSecure)")
 	let runs = args.int("runs", 5)
 
 	// (a) AX: set kAXSelectedTextAttribute.
@@ -189,10 +189,16 @@ func runInsert(_ args: Args) {
 
 	var saveTimes: [Double] = [], setTimes: [Double] = [], provideTimes: [Double] = [], appearTimes: [Double] = []
 	var restoreOK = 0
+	NSRunningApplication(processIdentifier: field.pid)?.activate()
+	let front = runLoop(for: 3) { focusedField().0?.pid == field.pid }
+	print("  (b) activated TextEdit for ⌘V: system-wide focus on TextEdit = \(front)")
 	for i in 0..<runs {
-		guard NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.TextEdit" else {
-			print("    TextEdit no longer frontmost; stopping paste trials")
-			break
+		// ⌘V goes to whatever is focused, so check right before every post.
+		guard NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.apple.TextEdit",
+			focusedField().0?.pid == field.pid
+		else {
+			print("    TextEdit not focused (frontmost: \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil")); skipping paste trial \(i)")
+			continue
 		}
 		let marker = " [paste\(i)]"
 		let t0 = nowNs()
@@ -207,6 +213,9 @@ func runInsert(_ args: Args) {
 		let t2 = nowNs()
 		postCommandV()
 		let posted = nowNs()
+		// Do not make synchronous AX calls into the target while it may be blocked asking us for
+		// the lazy pasteboard data: both sides wait until the AX messaging timeout (0.25 s here).
+		if !args.flag("naive-wait") { runLoop(for: 2) { !provider.requests.isEmpty } }
 		let appeared = runLoop(for: 2) { axString(field.element, kAXValueAttribute as String)?.contains(marker) == true }
 		let t3 = nowNs()
 		if let first = provider.requests.first { provideTimes.append(msValue(first.0 - posted)) }
@@ -229,6 +238,22 @@ func runInsert(_ args: Args) {
 		NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.TextEdit").forEach { $0.terminate() }
 	}
 	previousApp?.activate()
+}
+
+/// TextEdit's focused element via its application element: works while TextEdit is in the
+/// background, unlike the system-wide focused element.
+func textEditField() -> FocusedField? {
+	guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.TextEdit").first else { return nil }
+	let element = AXUIElementCreateApplication(app.processIdentifier)
+	AXUIElementSetMessagingTimeout(element, 0.25)
+	guard let value = axCopy(element, kAXFocusedUIElementAttribute as String).1, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+	let focused = value as! AXUIElement
+	return FocusedField(
+		element: focused,
+		pid: app.processIdentifier,
+		role: axString(focused, kAXRoleAttribute as String) ?? "",
+		subrole: axString(focused, kAXSubroleAttribute as String) ?? ""
+	)
 }
 
 /// Pasteboard save/set/restore timings that need no permission.
@@ -260,28 +285,83 @@ func runPasteboardOnly(_ args: Args) {
 	print("    restore \(stats(restore)); fidelity \(ok)/\(runs)")
 }
 
-/// Shows a window with an NSSecureTextField and checks both secure-field signals.
+/// Runs a system-wide AX focus query off the main thread. When the focused element belongs to
+/// this process, a main-thread query would wait on itself until the AX messaging timeout.
+@MainActor
+func focusedFieldOffMain() -> (FocusedField?, AXError) {
+	final class Box: @unchecked Sendable { var value: (FocusedField?, AXError)? }
+	let box = Box()
+	DispatchQueue.global().async { box.value = focusedField() }
+	runLoop(for: 2) { box.value != nil }
+	return box.value ?? (nil, .cannotComplete)
+}
+
+/// Probes off the happy path, all inside our own windows so nothing reaches other apps:
+/// 1. a focused window with no text field, 2. a focused NSSecureTextField.
 @MainActor
 func runSecureDemo() {
 	let app = NSApplication.shared
-	app.setActivationPolicy(.accessory)
-	let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 320, height: 80), styleMask: [.titled], backing: .buffered, defer: false)
-	window.title = "yapio secure field demo"
-	let field = NSSecureTextField(frame: NSRect(x: 20, y: 25, width: 280, height: 24))
-	window.contentView?.addSubview(field)
-	window.makeKeyAndOrderFront(nil)
-	app.activate()
-	window.makeFirstResponder(field)
-	runLoop(for: 1.0)
-	print("  secure field focused in own window; app active: \(app.isActive)")
-	print("  IsSecureEventInputEnabled: \(IsSecureEventInputEnabled())")
-	let (focused, err) = focusedField()
-	if let focused {
-		print("  AX focused: pid \(focused.pid) (self \(getpid())) role \(focused.role) subrole '\(focused.subrole)' isSecure=\(focused.isSecure)")
-	} else {
-		print("  AX focused element: \(axErrorName(err))")
+	// .accessory + activate() does not take focus from the frontmost app on macOS 26
+	// (cooperative activation), so become a regular app and ask explicitly.
+	app.setActivationPolicy(.regular)
+	app.finishLaunching() // without it the process answers AX with notImplemented
+	let previousApp = NSWorkspace.shared.frontmostApplication
+	let userClipboard = SavedPasteboard.save()
+	defer { userClipboard.restore(); previousApp?.activate() }
+
+	func show(_ title: String, _ content: NSView) -> NSWindow {
+		let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 320, height: 80), styleMask: [.titled], backing: .buffered, defer: false)
+		window.title = title
+		window.contentView?.addSubview(content)
+		window.makeKeyAndOrderFront(nil)
+		app.activate(ignoringOtherApps: true)
+		window.makeFirstResponder(content)
+		runLoop(for: 1.0)
+		return window
 	}
-	window.close()
-	runLoop(for: 0.2)
+
+	func tryInsert(_ label: String) {
+		print("  [\(label)] app active: \(app.isActive), frontmost: \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil")")
+		let (focused, err) = focusedFieldOffMain()
+		guard let focused else { print("  [\(label)] AX focused element: \(axErrorName(err))"); return }
+		print("  [\(label)] AX focused: pid \(focused.pid) (self \(getpid())) role \(focused.role) subrole '\(focused.subrole)' isSecure=\(focused.isSecure); IsSecureEventInputEnabled=\(IsSecureEventInputEnabled())")
+		guard focused.pid == getpid() else {
+			print("  [\(label)] focus is in another app; probe aborted, nothing inserted or posted")
+			return
+		}
+		if focused.isSecure || IsSecureEventInputEnabled() {
+			print("  [\(label)] policy: secure field -> insert nothing, keep text for 'paste last'")
+			return
+		}
+		final class Box: @unchecked Sendable { var err: AXError? }
+		let box = Box()
+		let element = focused.element
+		DispatchQueue.global().async {
+			box.err = AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, "probe" as CFString)
+		}
+		runLoop(for: 2) { box.err != nil }
+		print("  [\(label)] AX set selected text -> \(box.err.map(axErrorName) ?? "timeout")")
+		// Paste fallback into a non-text target: does anyone ever ask for the data?
+		let provider = PasteProvider(text: "probe")
+		NSPasteboard.general.clearContents()
+		let item = NSPasteboardItem()
+		item.setDataProvider(provider, forTypes: [.string])
+		NSPasteboard.general.writeObjects([item])
+		postCommandV()
+		runLoop(for: 1.0) { !provider.requests.isEmpty }
+		print("  [\(label)] ⌘V -> pasteboard data requested: \(!provider.requests.isEmpty) (no request = nothing pasted; restore on timeout)")
+	}
+
+	let button = NSButton(title: "no text here", target: nil, action: nil)
+	button.frame = NSRect(x: 20, y: 25, width: 280, height: 24)
+	let plain = show("yapio probe: no text field", button)
+	tryInsert("no text field")
+	plain.close()
+
+	let field = NSSecureTextField(frame: NSRect(x: 20, y: 25, width: 280, height: 24))
+	let secure = show("yapio probe: secure field", field)
+	tryInsert("secure field")
+	secure.close()
+	runLoop(for: 0.3)
 	print("  after close, IsSecureEventInputEnabled: \(IsSecureEventInputEnabled())")
 }
