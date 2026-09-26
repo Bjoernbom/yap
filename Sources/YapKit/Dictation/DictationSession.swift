@@ -125,11 +125,13 @@ public actor DictationSession {
 		levelContinuation.finish()
 	}
 
-	/// Follows the hotkey until its stream ends.
+	/// Follows the hotkey until its stream ends, then lets a dictation that is
+	/// already transcribing finish, so its words are saved and inserted.
 	public func run() async {
 		for await action in hotkey.actions() {
 			await handle(action)
 		}
+		await teardown?.value
 	}
 
 	/// Applies one hotkey action. `run()` calls this; the app may too (e.g. a

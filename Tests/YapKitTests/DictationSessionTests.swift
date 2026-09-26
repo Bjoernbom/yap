@@ -317,6 +317,22 @@ import Testing
 		await running.value
 	}
 
+	@Test func runLetsTheLastDictationFinish() async throws {
+		let rig = Rig()
+		await rig.transcription.configure(holdsFinish: true)
+		let running = Task { await rig.session.run() }
+		rig.hotkey.send(.start)
+		#expect(await eventually { await rig.transcription.appended == 10 })
+		rig.hotkey.send(.stop)
+		#expect(await eventually { await rig.transcription.isHoldingFinish })
+		rig.hotkey.continuation.finish()
+		try await Task.sleep(for: .milliseconds(20))
+		await rig.transcription.releaseFinish()
+		await running.value
+		#expect(await rig.inserter.inserted.count == 1)
+		#expect(await rig.session.state == .idle)
+	}
+
 	@Test func realStoreEndToEnd() async throws {
 		let rig = Rig()
 		let store = try SQLiteHistoryStore.inMemory()
