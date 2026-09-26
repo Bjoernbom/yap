@@ -3,7 +3,7 @@ import Testing
 
 /// Returns "c0", "c1", … in call order. Can hold calls at a gate to model a
 /// slow engine, and tracks how many calls overlap.
-private actor FakeEngine: SpeechEngine {
+private actor ChunkEngine: SpeechEngine {
 	private(set) var receivedSampleCounts: [Int] = []
 	private(set) var started = 0
 	private(set) var maxConcurrent = 0
@@ -78,7 +78,7 @@ private func feed(_ transcriber: StreamingTranscriber, hops: Int, extra: Int = 0
 }
 
 /// Polls until `condition` holds; fails instead of hanging.
-private func eventually(_ condition: @Sendable () async -> Bool) async throws {
+private func untilTrue(_ condition: @Sendable () async -> Bool) async throws {
 	for _ in 0..<2000 {
 		if await condition() { return }
 		try await Task.sleep(for: .milliseconds(1))
@@ -89,7 +89,7 @@ private func eventually(_ condition: @Sendable () async -> Bool) async throws {
 @Suite("Streaming transcription")
 struct StreamingTranscriberTests {
 	@Test func transcribesEachPauseAndTheTail() async throws {
-		let engine = FakeEngine()
+		let engine = ChunkEngine()
 		let vad = ScriptedVAD(script: [s, s, q, q, q, s, s, q, q, q, s, s])
 		let transcriber = StreamingTranscriber(engine: engine, vad: vad)
 		await transcriber.begin()
@@ -102,12 +102,12 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func appendNeverWaitsForTheEngine() async throws {
-		let engine = FakeEngine(gated: true)
+		let engine = ChunkEngine(gated: true)
 		let vad = ScriptedVAD(script: [s, s, q, q, q, s, s, q, q, q, s])
 		let transcriber = StreamingTranscriber(engine: engine, vad: vad)
 		await transcriber.begin()
 		await feed(transcriber, hops: 6)
-		try await eventually { await engine.started == 1 }
+		try await untilTrue { await engine.started == 1 }
 		// The engine is stuck on chunk 1; more audio still goes straight in.
 		await feed(transcriber, hops: 30)
 		#expect(await engine.started == 1)
@@ -119,7 +119,7 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func shortSilentPressNeverReachesTheEngine() async throws {
-		let engine = FakeEngine()
+		let engine = ChunkEngine()
 		let transcriber = StreamingTranscriber(engine: engine, vad: ScriptedVAD(script: []))
 		await transcriber.begin()
 		await feed(transcriber, hops: 0, extra: 3200)
@@ -128,7 +128,7 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func finishWithoutAudioIsEmpty() async throws {
-		let engine = FakeEngine()
+		let engine = ChunkEngine()
 		let transcriber = StreamingTranscriber(engine: engine, vad: ScriptedVAD(script: []))
 		#expect(try await transcriber.finish() == "")
 		await transcriber.begin()
@@ -137,7 +137,7 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func emptyEngineTextsGiveAnEmptyResult() async throws {
-		let engine = FakeEngine(texts: ["", " "])
+		let engine = ChunkEngine(texts: ["", " "])
 		let vad = ScriptedVAD(script: [s, s, q, q, q, s])
 		let transcriber = StreamingTranscriber(engine: engine, vad: vad)
 		await transcriber.begin()
@@ -147,7 +147,7 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func finishTwiceReturnsTheSameTextWithoutRetranscribing() async throws {
-		let engine = FakeEngine()
+		let engine = ChunkEngine()
 		let transcriber = StreamingTranscriber(engine: engine, vad: ScriptedVAD(script: [s, s, s]))
 		await transcriber.begin()
 		await feed(transcriber, hops: 3)
@@ -159,12 +159,12 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func cancelDropsInFlightWork() async throws {
-		let engine = FakeEngine(gated: true)
+		let engine = ChunkEngine(gated: true)
 		let vad = ScriptedVAD(script: [s, s, q, q, q, s, s])
 		let transcriber = StreamingTranscriber(engine: engine, vad: vad)
 		await transcriber.begin()
 		await feed(transcriber, hops: 7)
-		try await eventually { await engine.started == 1 }
+		try await untilTrue { await engine.started == 1 }
 		await transcriber.cancel()
 		await engine.open()
 		#expect(try await transcriber.finish() == "")
@@ -177,7 +177,7 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func appendBeforeBeginIsIgnored() async throws {
-		let engine = FakeEngine()
+		let engine = ChunkEngine()
 		let transcriber = StreamingTranscriber(engine: engine, vad: ScriptedVAD(script: [s, s, s]))
 		await feed(transcriber, hops: 3)
 		#expect(try await transcriber.finish() == "")
@@ -185,14 +185,14 @@ struct StreamingTranscriberTests {
 	}
 
 	@Test func engineErrorsSurfaceFromFinish() async throws {
-		let transcriber = StreamingTranscriber(engine: FailingEngine(), vad: ScriptedVAD(script: [s, s, s]))
+		let transcriber = StreamingTranscriber(engine: BrokenChunkEngine(), vad: ScriptedVAD(script: [s, s, s]))
 		await transcriber.begin()
 		await feed(transcriber, hops: 3)
 		await #expect(throws: SpeechError.modelNotPrepared) { try await transcriber.finish() }
 	}
 }
 
-private actor FailingEngine: SpeechEngine {
+private actor BrokenChunkEngine: SpeechEngine {
 	func prepare(progress: @escaping @Sendable (ModelProgress) -> Void) async throws {}
 	func warmUp() async {}
 	func unload() async {}
