@@ -9,6 +9,9 @@ let package = Package(
 	],
 	dependencies: [
 		// No traits: the default NemoTextProcessing trait adds ~8 MB we don't use.
+		// Xcode honours this too: the Rust engine (rustfst/text_processing_rs)
+		// is absent from yap.app. The "Nemo" symbols that remain are FluidAudio's
+		// own Nemotron ASR and the pass-through NemoTextNormalizer shim.
 		.package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.17.4", traits: []),
 		.package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.1"),
 	],

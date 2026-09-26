@@ -24,6 +24,14 @@ settings:
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+  configs:
+    Release:
+      # Strip on a plain `build`, not only on archive/install: the symbol
+      # table is half the binary (16.6 MB -> 8.7 MB). Symbols stay in the dSYM.
+      DEPLOYMENT_POSTPROCESSING: YES
+      STRIP_INSTALLED_PRODUCT: YES
+      STRIP_STYLE: all
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
 
 targets:
   yap:
@@ -63,7 +71,26 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: "-"
         DEVELOPMENT_TEAM: ""
         COMBINE_HIDPI_IMAGES: YES
         GENERATE_INFOPLIST_FILE: NO
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "-"
+        Release:
+          # The stable self-signed identity (docs/SIGNING.md) from the
+          # YAP_SIGN_IDENTITY environment variable or App/Signing.local.xcconfig;
+          # ad-hoc otherwise, with a warning from the script below.
+          CODE_SIGN_IDENTITY: $(YAP_SIGN_IDENTITY:default=-)
+          # Not timestamped: Apple's timestamp service only serves Apple-issued certificates.
+          OTHER_CODE_SIGN_FLAGS: --timestamp=none
+    configFiles:
+      Release: App/Release.xcconfig
+    preBuildScripts:
+      - name: Warn when Release is ad-hoc signed
+        basedOnDependencyAnalysis: false
+        showEnvVarsInLog: false
+        script: |
+          if [ "$CONFIGURATION" = Release ] && [ "$CODE_SIGN_IDENTITY" = "-" ]; then
+            echo "warning: Release build is AD-HOC signed. Its identity changes every build, so macOS drops Microphone and Accessibility permissions on update. Set YAP_SIGN_IDENTITY (docs/SIGNING.md)."
+          fi
