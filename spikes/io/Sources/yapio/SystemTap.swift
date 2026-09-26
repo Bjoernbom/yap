@@ -180,7 +180,7 @@ func runSystemTap(_ args: Args) {
 	print("  own process object: \(selfObject.map(String.init) ?? "none (not an audio client yet)")")
 
 	// 1. Global tap excluding ourselves, while afplay plays.
-	let url1 = localDir.appendingPathComponent("tap-global.wav")
+	let url1 = localDir.appendingPathComponent("\(args.value("name") ?? "tap-global").wav")
 	var player: Process?
 	let r1 = captureTap(.globalExcluding(selfObject.map { [$0] } ?? []), seconds: seconds, url: url1) {
 		runLoop(for: 0.2)
@@ -193,6 +193,7 @@ func runSystemTap(_ args: Args) {
 		print("  RESULT: global capture \(r1.error != nil ? "failed" : "is silent") -> System Audio Recording permission missing or denied")
 		if !args.flag("all") { return }
 	}
+	if args.flag("global-only") { return }
 
 	// 2. Tap only afplay's process object (needs afplay to be an audio client first).
 	let afplay = Children.shared.launch("/usr/bin/afplay", [sound, "-v", "1"])

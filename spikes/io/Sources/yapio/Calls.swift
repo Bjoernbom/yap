@@ -47,11 +47,15 @@ final class CallWatcher: @unchecked Sendable {
 		var running = address(kAudioDevicePropertyDeviceIsRunningSomewhere)
 		AudioObjectAddPropertyListenerBlock(device, &running, queue) { [self] _, _ in
 			log("default input '\(AudioDeviceDescription(device))' isRunningSomewhere = \(isRunningSomewhere(device))")
+			refresh("device running changed")
 		}
 		var list = address(kAudioHardwarePropertyProcessObjectList)
-		AudioObjectAddPropertyListenerBlock(systemObject, &list, queue) { [self] _, _ in refresh("process list changed") }
+		AudioObjectAddPropertyListenerBlock(systemObject, &list, queue) { [self] _, _ in log("event: process list changed (\(audioProcesses().count) objects)"); refresh("process list changed") }
 		queue.sync { refresh("initial") }
 	}
+
+	/// Polling fallback, to tell apart "listener did not fire" from "property never changed".
+	func poll() { queue.async { [self] in refresh("poll") } }
 
 	/// Per-process IsRunningInput listeners; the process list listener alone does not fire when an
 	/// existing audio client starts using the mic.
@@ -60,7 +64,7 @@ final class CallWatcher: @unchecked Sendable {
 		for p in procs where !registered.contains(p.object) {
 			registered.insert(p.object)
 			var addr = address(kAudioProcessPropertyIsRunningInput)
-			AudioObjectAddPropertyListenerBlock(p.object, &addr, queue) { [self] _, _ in refresh("isRunningInput changed") }
+			AudioObjectAddPropertyListenerBlock(p.object, &addr, queue) { [self] _, _ in log("event: isRunningInput changed on obj \(p.object)"); refresh("isRunningInput changed") }
 		}
 		let now = Set(procs.filter(\.input).map(\.pid))
 		for pid in now.subtracting(inputUsers) {
@@ -88,6 +92,9 @@ func runCalls(_ args: Args) {
 	}
 	let watcher = CallWatcher()
 	watcher.start()
+	let timer = Timer(timeInterval: 0.1, repeats: true) { _ in if args.flag("poll") { watcher.poll() } }
+	RunLoop.current.add(timer, forMode: .common)
+	defer { timer.invalidate() }
 	if args.flag("demo") {
 		// Start another process that records the mic, to prove we see it (bundle id comes from the
 		// embedded Info.plist of the child).

@@ -183,6 +183,9 @@ func micTrial(mode: MicMode, vp: Bool, pin: AudioDeviceID?, record: Double = 0, 
 		} else {
 			try engine.start()
 			result.startCallMs = msValue(nowNs() - startAt)
+			if vp, vpVariant.contains("lateduck") {
+				input.voiceProcessingOtherAudioDuckingConfiguration = .init(enableAdvancedDucking: false, duckingLevel: .min)
+			}
 			runLoop(for: 3) { sink.first != 0 }
 			result.fill(sink, startAt)
 		}
