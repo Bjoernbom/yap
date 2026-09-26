@@ -59,6 +59,8 @@ struct TranscribeReport: Codable {
 	var latencyMilliseconds: Double
 	var confidence: Float
 	var text: String
+	/// "word@start-end", to check the timings overlap stitching relies on.
+	var words: [String]
 }
 
 /// One file in one engine call, after a warm-up.
@@ -78,7 +80,8 @@ func runTranscribe(_ options: Options) async throws {
 		file: path, model: options.model.rawValue, audioSeconds: Double(samples.count) / AudioChunk.sampleRate,
 		prepareMilliseconds: prepareTime, warmUpMilliseconds: warmTime,
 		latencyMilliseconds: milliseconds(clock.now - start), confidence: transcript.confidence,
-		text: transcript.text)
+		text: transcript.text,
+		words: transcript.words.map { "\($0.text)@\(format($0.start, 2))-\(format($0.end, 2))" })
 	if options.json { return try printJSON(report) }
 	print("\(report.file): \(format(report.audioSeconds, 2)) s of audio, model \(report.model)")
 	print("prepare \(format(report.prepareMilliseconds, 0)) ms, warm-up \(format(report.warmUpMilliseconds, 0)) ms")
