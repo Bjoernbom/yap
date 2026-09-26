@@ -124,11 +124,9 @@ private func scratchDirectory() -> URL {
 	FileManager.default.temporaryDirectory.appending(path: "yap-notes-session-\(UUID().uuidString)")
 }
 
-/// Waits until the source's scripted chunks went through the pipeline.
-private func settle() async {
-	try? await Task.sleep(for: .milliseconds(300))
-}
-
+/// No test waits for the audio to go through before `stop()`: the scripted
+/// chunks are buffered in the source's stream, and `stop()` drains that stream
+/// and the transcriber's tail before it builds the note.
 @Suite("Notes session")
 struct NotesSessionTests {
 	@Test func twoTracksLineUpOnHostTimeAcrossASystemAudioGap() async throws {
@@ -141,7 +139,6 @@ struct NotesSessionTests {
 			you: you, them: them, engine: engine, vad: LevelVAD(),
 			configuration: NotesConfiguration(audioDirectory: directory))
 		try await session.start()
-		await settle()
 		let note = try await session.stop()
 
 		#expect(note.segments.map(\.text) == ["Hello, can you hear me?", "Loud and clear, thanks."])
@@ -163,7 +160,6 @@ struct NotesSessionTests {
 			you: you, them: them, engine: engine, vad: LevelVAD(),
 			configuration: NotesConfiguration(audioDirectory: scratchDirectory()))
 		try await session.start()
-		await settle()
 		let note = try await session.stop()
 		#expect(note.segments.map(\.speaker) == [.them(nil)])
 	}
@@ -181,7 +177,6 @@ struct NotesSessionTests {
 			you: you, them: them, engine: engine, vad: LevelVAD(), diarizer: diarizer,
 			configuration: NotesConfiguration(audioDirectory: directory))
 		try await session.start()
-		await settle()
 		let note = try await session.stop()
 
 		#expect(note.segments.map(\.speaker) == [.them(1), .them(2)])
@@ -200,7 +195,6 @@ struct NotesSessionTests {
 				you: you, them: them, engine: SentenceEngine([0.5: "Just me."]), vad: LevelVAD(),
 				summaryModel: Unavailable(), configuration: NotesConfiguration(audioDirectory: scratchDirectory()))
 			try await session.start()
-			await settle()
 			let note = try await session.stop()
 			#expect(note.segments.map(\.text) == ["Just me."])
 			#expect(note.notices.contains(NotesNotice.micOnly))
@@ -236,16 +230,17 @@ struct NotesSessionTests {
 		#expect(await !session.isRecording)
 	}
 
-	@Test func theTimeLimitStopsTheAudioAndTellsTheOwner() async throws {
+	@Test(.timeLimit(.minutes(1))) func theTimeLimitStopsTheAudioAndTellsTheOwner() async throws {
 		let you = ScriptedSource([.init(at: 0, seconds: 1, amplitude: 0.5)])
-		let reached = Mutex(false)
+		let (reached, reachedSink) = AsyncStream.makeStream(of: Void.self)
 		let session = NotesSession(
 			you: you, them: nil, engine: SentenceEngine([0.5: "Short one."]), vad: LevelVAD(),
 			configuration: NotesConfiguration(maxDuration: .milliseconds(200), audioDirectory: scratchDirectory()),
-			onLimitReached: { reached.withLock { $0 = true } })
+			onLimitReached: { reachedSink.yield() })
 		try await session.start()
-		try await Task.sleep(for: .milliseconds(500))
-		#expect(reached.withLock { $0 })
+		// Wait for the owner to be told, not for a guess at how long that takes.
+		var told = reached.makeAsyncIterator()
+		#expect(await told.next() != nil)
 		#expect(await you.stops == 1)
 		let note = try await session.stop()
 		#expect(note.notices.contains(NotesNotice.limitReached))
