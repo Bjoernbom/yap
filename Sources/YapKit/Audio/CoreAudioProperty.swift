@@ -13,7 +13,7 @@ enum CoreAudioProperty {
 		AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
 	}
 
-	static func value<T>(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector, initial: T) -> T? {
+	static func value<T: BitwiseCopyable>(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector, initial: T) -> T? {
 		var addr = address(selector)
 		var value = initial
 		var size = UInt32(MemoryLayout<T>.size)
@@ -21,7 +21,7 @@ enum CoreAudioProperty {
 		return status == noErr ? value : nil
 	}
 
-	static func array<T>(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector, zero: T) -> [T] {
+	static func array<T: BitwiseCopyable>(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector, zero: T) -> [T] {
 		var addr = address(selector)
 		var size: UInt32 = 0
 		guard AudioObjectGetPropertyDataSize(object, &addr, 0, nil, &size) == noErr, size > 0 else { return [] }
