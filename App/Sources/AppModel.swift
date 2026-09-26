@@ -13,6 +13,7 @@ final class AppModel {
 
 	#if DEBUG
 	let demo: OverlayDemo
+	private let notesCommands: NotesDebugCommands
 	#endif
 
 	init() {
@@ -26,6 +27,7 @@ final class AppModel {
 		var startsDictation = true
 		#if DEBUG
 		demo = OverlayDemo(overlay: overlay)
+		notesCommands = NotesDebugCommands(notes: notes, overlay: overlay)
 		demo.applyLaunchArguments()
 		let defaults = UserDefaults.standard
 		overlay.captureDirectory = defaults.string(forKey: "YapCaptureDir").map { URL(filePath: $0) }
