@@ -12,6 +12,12 @@ import AppKit
 /// - `-YapSnapshots <dir>` renders every state to PNGs in `<dir>` and quits.
 /// - `-YapProbe <dir>` runs `OverlayProbe` against the live panel.
 /// - `-YapOpenWindows YES` opens History and Settings at launch.
+///
+/// Dictation (read by `AppModel` and `DictationController`):
+/// - `-YapHistoryPath <file>` uses a scratch history database.
+/// - `-YapCaptureDir <dir>` writes every shown notch state to PNG.
+/// - `-YapModelDelay <seconds>` holds the model back, to try presses
+///   before it is ready.
 @MainActor
 final class OverlayDemo {
 	private let overlay: OverlayController
