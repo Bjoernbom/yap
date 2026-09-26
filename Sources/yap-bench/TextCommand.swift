@@ -22,7 +22,7 @@ func runText(_ options: Options) async throws {
 	}
 	let pipeline = TextPipeline(settings: settings)
 	if options.polish, case .unavailable(let reason) = pipeline.polishAvailability {
-		log("polish unavailable: \(reason)")
+		log("polish unavailable, needs Apple Intelligence: \(reason)")
 	}
 	let styles: [WritingStyle?] = options.allStyles ? WritingStyle.allCases : [options.style]
 	var reports: [TextReport] = []

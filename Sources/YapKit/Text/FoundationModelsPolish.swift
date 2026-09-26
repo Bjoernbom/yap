@@ -13,15 +13,16 @@ public struct FoundationModelsPolishModel: PolishModel {
 	}
 
 	/// Read fresh every time: the user can turn Apple Intelligence on while
-	/// yap runs, and the model downloads after that.
+	/// yap runs, and the model downloads after that. Reasons follow
+	/// "Needs Apple Intelligence." in Settings.
 	public var availability: PolishAvailability {
 		switch SystemLanguageModel.default.availability {
 		case .available:
 			return .available
 		case .unavailable(.appleIntelligenceNotEnabled):
-			return .unavailable("Turn on Apple Intelligence in System Settings → Apple Intelligence & Siri.")
+			return .unavailable("Turn it on in System Settings → Apple Intelligence & Siri.")
 		case .unavailable(.modelNotReady):
-			return .unavailable("Apple Intelligence is still downloading. Check back in a bit.")
+			return .unavailable("It's still downloading. Check back in a bit.")
 		case .unavailable(.deviceNotEligible):
 			return .unavailable("This Mac can't run Apple Intelligence.")
 		case .unavailable:
