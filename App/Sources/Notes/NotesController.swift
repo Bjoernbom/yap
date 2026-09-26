@@ -161,10 +161,10 @@ final class NotesController {
 				self?.liveSegments = segments
 			}
 		}
-		if UserDefaults.standard.bool(forKey: Self.consentKey) {
+		if AppDefaults.store.bool(forKey: Self.consentKey) {
 			overlay.show(.recording(since: since))
 		} else {
-			UserDefaults.standard.set(true, forKey: Self.consentKey)
+			AppDefaults.store.set(true, forKey: Self.consentKey)
 			flash(Message.consent)
 		}
 	}
@@ -332,7 +332,7 @@ final class NotesController {
 	}
 
 	static var folder: URL {
-		UserDefaults.standard.string(forKey: folderKey).map { URL(filePath: $0, directoryHint: .isDirectory) }
+		AppDefaults.store.string(forKey: folderKey).map { URL(filePath: $0, directoryHint: .isDirectory) }
 			?? MarkdownWriter.defaultFolder
 	}
 
