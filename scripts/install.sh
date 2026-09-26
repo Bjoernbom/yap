@@ -36,8 +36,9 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 trap 'exit 130' INT TERM
 
-# 1. Find the release. Not /releases/latest: 1.x ships as GitHub pre-releases
-#    while yap 0.4 still updates itself from "latest".
+# 1. Find the release: the newest 1.x that isn't a pre-release, or exactly the
+#    one asked for. Through the API rather than /releases/latest, so a
+#    pre-release can still be installed by name.
 curl -fsSL -H 'Accept: application/vnd.github+json' "$releases_api" -o "$work/releases.json" \
 	|| die "couldn't read the release list from GitHub. Check your connection and try again."
 
@@ -46,7 +47,7 @@ json() { plutil -extract "$1" raw -o - "$work/releases.json" 2>/dev/null; }
 tag='' index=''
 i=0
 while name=$(json "$i.tag_name"); do
-	if [ "$(json "$i.draft")" != true ]; then
+	if [ "$(json "$i.draft")" != true ] && { [ -n "$wanted" ] || [ "$(json "$i.prerelease")" != true ]; }; then
 		case $name in
 			v1.*)
 				if [ -z "$wanted" ] || [ "$name" = "$wanted" ]; then
