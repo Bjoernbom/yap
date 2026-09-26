@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="196" viewBox="0 0 560 196" role="img" aria-labelledby="t d">
+	<title id="t">Open Anyway in System Settings</title>
+	<desc id="d">System Settings, Privacy &amp; Security, Security section: the line "yap" was blocked to protect your Mac, with the Open Anyway button next to it, highlighted.</desc>
+	<style>
+		.bg { fill: #f2f2f4; }
+		.card { fill: #ffffff; stroke: #dcdce0; }
+		.ink { fill: #1d1d1f; }
+		.dim { fill: #6e6e73; }
+		.btn { fill: #e6e6ea; stroke: #c8c8ce; }
+		.ring { fill: none; stroke: #7fb800; }
+		@media (prefers-color-scheme: dark) {
+			.bg { fill: #1e1e20; }
+			.card { fill: #2a2a2d; stroke: #3a3a3e; }
+			.ink { fill: #f5f5f7; }
+			.dim { fill: #98989d; }
+			.btn { fill: #48484c; stroke: #5a5a5f; }
+			.ring { stroke: #c8ff3d; }
+		}
+		text { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+	</style>
+	<rect class="bg" width="560" height="196" rx="14"/>
+	<text class="dim" x="24" y="34" font-size="12">System Settings  ›  Privacy &amp; Security</text>
+	<text class="ink" x="24" y="66" font-size="15" font-weight="600">Security</text>
+	<rect class="card" x="24" y="80" width="512" height="92" rx="10"/>
+	<text class="ink" x="44" y="112" font-size="13">“yap” was blocked to protect your Mac.</text>
+	<text class="dim" x="44" y="134" font-size="12">Scroll down to Security, then click Open Anyway once.</text>
+	<rect class="btn" x="400" y="130" width="116" height="28" rx="7"/>
+	<text class="ink" x="458" y="149" font-size="13" text-anchor="middle">Open Anyway</text>
+	<rect class="ring" x="394" y="124" width="128" height="40" rx="11" stroke-width="3"/>
+</svg>

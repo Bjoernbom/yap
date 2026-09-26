@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yap — talk. it types.</title>
+<meta name="description" content="Push-to-talk dictation and meeting notes for the Mac. It all runs on your Mac. Nothing leaves it. Free and open source.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preload" href="fonts/PixelifySans.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+@font-face {
+	font-family: "Pixelify Sans";
+	src: url("fonts/PixelifySans.ttf") format("truetype");
+	font-weight: 400 700;
+	font-display: swap;
+}
+
+:root {
+	--bg: #ffffff;
+	--fg: #111113;
+	--muted: #5c5c63;
+	--line: #e3e3e8;
+	--card: #f5f5f7;
+	--screen: #e6e7eb;
+	--screen-line: #d4d5db;
+	--button-bg: #111113;
+	--button-fg: #ffffff;
+	--focus: #3d6b00;
+	--lime: #c8ff3d;
+	--notch: #000000;
+	--pixel: "Pixelify Sans", ui-monospace, "SF Mono", Menlo, monospace;
+	--sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+	--mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #0b0b0c;
+		--fg: #f5f5f7;
+		--muted: #a1a1a8;
+		--line: #26262a;
+		--card: #151517;
+		--screen: #1b1c20;
+		--screen-line: #2c2d33;
+		--button-bg: #c8ff3d;
+		--button-fg: #000000;
+		--focus: #c8ff3d;
+	}
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	font: 17px/1.55 var(--sans);
+	overflow-wrap: break-word;
+}
+
+a { color: inherit; text-underline-offset: 3px; }
+
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 3px;
+	border-radius: 4px;
+}
+
+.skip {
+	position: absolute;
+	left: 16px;
+	top: -48px;
+	padding: 8px 12px;
+	background: var(--button-bg);
+	color: var(--button-fg);
+	border-radius: 8px;
+	z-index: 1;
+}
+.skip:focus { top: 12px; }
+
+.wrap {
+	width: 100%;
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 0 16px;
+}
+
+/* Header */
+
+.top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding-top: 20px;
+	padding-bottom: 20px;
+}
+.brand {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	text-decoration: none;
+	font: 400 28px/1 var(--pixel);
+}
+.brand img { width: 32px; height: 32px; }
+.top nav a { color: var(--muted); font-size: 15px; }
+.top nav a:hover { color: var(--fg); }
+
+/* Hero */
+
+.hero {
+	text-align: center;
+	padding-top: 32px;
+	padding-bottom: 72px;
+}
+h1 {
+	margin: 40px 0 12px;
+	font: 400 clamp(44px, 11vw, 88px)/1 var(--pixel);
+	letter-spacing: -0.01em;
+}
+.lede {
+	max-width: 34em;
+	margin: 0 auto;
+	color: var(--muted);
+	font-size: 19px;
+}
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 12px;
+	margin-top: 28px;
+}
+.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 10px 22px;
+	border-radius: 999px;
+	border: 1px solid var(--line);
+	font-weight: 600;
+	font-size: 16px;
+	text-decoration: none;
+}
+.button.primary {
+	background: var(--button-bg);
+	color: var(--button-fg);
+	border-color: var(--button-bg);
+}
+.fine { margin-top: 16px; color: var(--muted); font-size: 14px; }
+
+/* The screen with the notch */
+
+.screen {
+	position: relative;
+	max-width: 560px;
+	height: 200px;
+	margin: 0 auto;
+	background: var(--screen);
+	border: 1px solid var(--screen-line);
+	border-radius: 14px;
+	overflow: hidden;
+}
+.notch {
+	position: absolute;
+	top: -1px;
+	left: 50%;
+	width: 260px;
+	height: 80px;
+	transform: translateX(-50%);
+	background: var(--notch);
+	border-radius: 0 0 24px 24px;
+	animation: notch 7s cubic-bezier(.3, 1.35, .5, 1) infinite;
+}
+@keyframes notch {
+	0%, 5% { width: 120px; height: 26px; border-radius: 0 0 10px 10px; }
+	10%, 86% { width: 260px; height: 80px; border-radius: 0 0 24px 24px; }
+	92%, 100% { width: 120px; height: 26px; border-radius: 0 0 10px 10px; }
+}
+.layer {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	animation: 7s steps(1, end) infinite;
+}
+.wave { gap: 2px; padding-top: 6px; animation-name: show-wave; }
+.work { gap: 2px; padding-top: 6px; animation-name: show-work; }
+.tick { animation-name: show-tick; }
+@keyframes show-wave { 0% { opacity: 0; } 10% { opacity: 1; } 55% { opacity: 0; } }
+@keyframes show-work { 0% { opacity: 0; } 55% { opacity: 1; } 70% { opacity: 0; } }
+@keyframes show-tick { 0% { opacity: 0; } 72% { opacity: 1; } 86% { opacity: 0; } }
+
+/* A bar is a column of 4 px dots on a 6 px pitch; heights stay odd so rows line up. */
+.wave i {
+	display: block;
+	width: 4px;
+	height: 4px;
+	background: linear-gradient(var(--lime) 4px, transparent 4px) 0 0 / 4px 6px repeat-y;
+	animation: var(--a, none) 1.3s steps(1, end) var(--d, 0s) infinite;
+}
+.wave i.q { opacity: .4; animation: none; }
+@keyframes wa { 0% { height: 4px; } 14% { height: 28px; } 28% { height: 52px; } 42% { height: 16px; } 57% { height: 40px; } 71% { height: 28px; } 85% { height: 4px; } }
+@keyframes wb { 0% { height: 16px; } 14% { height: 40px; } 28% { height: 28px; } 42% { height: 52px; } 57% { height: 16px; } 71% { height: 4px; } 85% { height: 28px; } }
+@keyframes wc { 0% { height: 28px; } 14% { height: 16px; } 28% { height: 4px; } 42% { height: 28px; } 57% { height: 52px; } 71% { height: 40px; } 85% { height: 16px; } }
+@keyframes wd { 0% { height: 40px; } 14% { height: 52px; } 28% { height: 16px; } 42% { height: 4px; } 57% { height: 28px; } 71% { height: 16px; } 85% { height: 40px; } }
+
+.work i {
+	display: block;
+	width: 4px;
+	height: 4px;
+	background: #3a3a3e;
+	animation: shimmer .9s steps(1, end) calc(var(--i) * 30ms) infinite;
+}
+@keyframes shimmer { 0% { background: #f5f5f7; } 12% { background: #8e8e93; } 24% { background: #3a3a3e; } }
+
+.tick i {
+	display: block;
+	width: 4px;
+	height: 4px;
+	transform: translate(-29px, -12px);
+	background: #fff;
+	box-shadow: 0 12px #fff, 6px 12px #fff, 6px 18px #fff, 12px 18px #fff, 12px 24px #fff, 18px 24px #fff,
+		18px 30px #fff, 24px 24px #fff, 24px 30px #fff, 30px 18px #fff, 30px 24px #fff, 36px 12px #fff,
+		36px 18px #fff, 42px 6px #fff, 42px 12px #fff, 48px 0 #fff, 48px 6px #fff, 54px 0 #fff;
+}
+
+.field {
+	position: absolute;
+	left: 24px;
+	right: 24px;
+	bottom: 24px;
+	min-height: 48px;
+	padding: 12px 14px;
+	background: var(--bg);
+	border: 1px solid var(--screen-line);
+	border-radius: 10px;
+	text-align: left;
+	font-size: 15px;
+	line-height: 22px;
+}
+.said { font-size: 0; animation: said 7s steps(1, end) infinite; }
+@keyframes said { 0% { font-size: 0; } 72% { font-size: 1em; } 98% { font-size: 0; } }
+.caret {
+	display: inline-block;
+	width: 2px;
+	height: 18px;
+	margin-left: 1px;
+	vertical-align: -3px;
+	background: var(--fg);
+	animation: blink 1s steps(1, end) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Sections */
+
+section.wrap { padding-top: 56px; padding-bottom: 56px; border-top: 1px solid var(--line); }
+h2 {
+	margin: 0 0 8px;
+	font: 400 32px/1.1 var(--pixel);
+}
+.intro { margin: 0 0 28px; color: var(--muted); }
+
+.features {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+	gap: 16px;
+}
+.feature {
+	padding: 24px;
+	background: var(--card);
+	border-radius: 16px;
+}
+.feature h3 { margin: 0 0 4px; font-size: 21px; }
+.feature p { margin: 0 0 12px; }
+.feature ul { margin: 0; padding-left: 20px; color: var(--muted); }
+.feature li + li { margin-top: 6px; }
+kbd {
+	font: 600 14px var(--sans);
+	padding: 1px 6px;
+	border: 1px solid var(--line);
+	border-bottom-width: 2px;
+	border-radius: 6px;
+	background: var(--bg);
+	color: var(--fg);
+}
+
+.privacy {
+	padding: 28px 24px;
+	background: #000;
+	color: #f5f5f7;
+	border-radius: 16px;
+}
+.privacy h2 { color: var(--lime); }
+.privacy p { margin: 0; max-width: 40em; color: #c7c7cc; }
+
+/* Install */
+
+.command {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 14px 14px 18px;
+	background: #000;
+	color: #f5f5f7;
+	border-radius: 12px;
+}
+.command code {
+	font: 14px/1.5 var(--mono);
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+.command code::before { content: "$ "; color: var(--lime); }
+.copy {
+	min-width: 76px;
+	min-height: 40px;
+	padding: 8px 14px;
+	font: 600 14px var(--sans);
+	color: #000;
+	background: var(--lime);
+	border: 0;
+	border-radius: 8px;
+	cursor: pointer;
+}
+.copy:focus-visible { outline-color: #fff; }
+.steps { margin: 12px 0 0; color: var(--muted); font-size: 15px; }
+.other {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+	gap: 16px;
+	margin-top: 28px;
+}
+.other h3 { margin: 0 0 6px; font-size: 17px; }
+.other p { margin: 0; color: var(--muted); font-size: 15px; }
+.other code { font: 14px var(--mono); color: var(--fg); overflow-wrap: anywhere; }
+.needs { margin-top: 28px; font-size: 15px; color: var(--muted); }
+
+footer.wrap {
+	padding-top: 32px;
+	padding-bottom: 48px;
+	border-top: 1px solid var(--line);
+	color: var(--muted);
+	font-size: 15px;
+}
+footer .made { font: 400 22px var(--pixel); color: var(--fg); margin: 0 0 8px; }
+footer p { margin: 0; }
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+	body { font-size: 16px; }
+	.hero { padding-top: 16px; padding-bottom: 56px; }
+	.lede { font-size: 17px; }
+	.screen { height: 184px; }
+	.field { left: 12px; right: 12px; bottom: 12px; font-size: 14px; }
+	.command { grid-template-columns: 1fr; }
+	.copy { justify-self: start; }
+	section.wrap { padding-top: 44px; padding-bottom: 44px; }
+	.feature, .privacy { padding: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.notch, .layer, .wave i, .work i, .said, .caret { animation: none; }
+	.wave { opacity: 1; }
+	.wave i:not(.q) { height: calc(var(--h, 1) * 12px - 8px); }
+	.said { font-size: 1em; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="wrap top">
+	<a class="brand" href="./" aria-label="yap home"><img src="icon.png" alt="" width="32" height="32">yap</a>
+	<nav aria-label="Elsewhere"><a href="https://github.com/Bjoernbom/yap">GitHub</a></nav>
+</header>
+
+<main id="main">
+	<div class="wrap hero">
+		<div class="screen" role="img" aria-label="The yap notch opens as you talk and shows a lime pixel waveform, shimmers while it works, shows a tick, and your words appear in the text field.">
+			<div class="notch" aria-hidden="true">
+				<div class="layer wave"><i class="q"></i><i class="q"></i><i style="--a:wa;--d:-1.31s;--h:2"></i><i style="--a:wc;--d:-0.93s;--h:4"></i><i style="--a:wb;--d:-0.06s;--h:5"></i><i style="--a:wd;--d:-0.11s;--h:2"></i><i style="--a:wd;--d:-0.49s;--h:2"></i><i style="--a:wb;--d:-1.01s;--h:1"></i><i style="--a:wd;--d:-0.28s;--h:3"></i><i style="--a:wa;--d:-0.89s;--h:3"></i><i style="--a:wc;--d:-0.67s;--h:4"></i><i style="--a:wa;--d:-0.31s;--h:5"></i><i style="--a:wb;--d:-0.16s;--h:3"></i><i style="--a:wc;--d:-1.16s;--h:2"></i><i style="--a:wa;--d:-0.99s;--h:3"></i><i style="--a:wd;--d:-1.24s;--h:4"></i><i style="--a:wd;--d:-0.58s;--h:3"></i><i style="--a:wb;--d:-1.12s;--h:3"></i><i style="--a:wa;--d:-0.72s;--h:5"></i><i style="--a:wd;--d:-1.4s;--h:4"></i><i style="--a:wc;--d:-0.97s;--h:2"></i><i style="--a:wa;--d:-0.82s;--h:3"></i><i style="--a:wc;--d:-0.24s;--h:4"></i><i style="--a:wd;--d:-0.06s;--h:2"></i><i style="--a:wc;--d:-0.54s;--h:3"></i><i style="--a:wd;--d:-0.93s;--h:2"></i><i style="--a:wa;--d:-1.34s;--h:2"></i><i style="--a:wd;--d:-1.12s;--h:1"></i><i class="q"></i><i class="q"></i></div>
+				<div class="layer work"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i><i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i></div>
+				<div class="layer tick"><i></i></div>
+			</div>
+			<div class="field" aria-hidden="true"><span class="said">Can you send the report to Anna before lunch?</span><span class="caret"></span></div>
+		</div>
+
+		<h1>talk. it types.</h1>
+		<p class="lede">Push-to-talk dictation and meeting notes for the Mac. Hold a key, say what you mean, let go. It all runs on your Mac. Nothing leaves it.</p>
+		<div class="actions">
+			<a class="button primary" href="#install">Download yap</a>
+			<a class="button" href="https://github.com/Bjoernbom/yap">View the source</a>
+		</div>
+		<p class="fine">Free and open source · macOS 26+ · Apple silicon</p>
+	</div>
+
+	<section class="wrap" aria-labelledby="does">
+		<h2 id="does">two things, done well</h2>
+		<p class="intro">No settings maze. Good defaults and one screen of settings.</p>
+		<div class="features">
+			<article class="feature">
+				<h3>Dictate</h3>
+				<p>Hold <kbd>fn</kbd>, talk, let go. The text lands where your cursor is.</p>
+				<ul>
+					<li>Transcribes while you talk, so a long ramble pastes as fast as a short one.</li>
+					<li>Picks up 25 European languages on its own.</li>
+					<li>Style follows the app: casual in Slack, proper in Mail, identifiers intact in Xcode.</li>
+					<li>Double-tap to go hands-free. <kbd>Esc</kbd> cancels. <kbd>⌃⌘V</kbd> pastes the last one again.</li>
+				</ul>
+			</article>
+			<article class="feature">
+				<h3>Notes</h3>
+				<p>Record a meeting with <kbd>⌥⌘N</kbd>. Get a clean note.</p>
+				<ul>
+					<li>You and the call as two tracks, split into speakers.</li>
+					<li>Title, summary, decisions and action items, plus the full transcript.</li>
+					<li>Plain Markdown files in a folder you choose.</li>
+					<li>Notices Zoom, Meet, Teams, Slack and FaceTime calls. No bot joins your meeting.</li>
+				</ul>
+			</article>
+		</div>
+	</section>
+
+	<section class="wrap" aria-labelledby="private">
+		<div class="privacy">
+			<h2 id="private">runs on your Mac. nothing leaves it.</h2>
+			<p>Speech and language models run on-device. The only network calls are the one-time model download and update checks. No telemetry, no accounts, no API keys.</p>
+		</div>
+	</section>
+
+	<section class="wrap" id="install" aria-labelledby="install-title">
+		<h2 id="install-title">install</h2>
+		<p class="intro">Paste this into Terminal. It downloads the newest yap, checks it and moves it to Applications.</p>
+		<div class="command">
+			<code id="one-liner">curl -fsSL https://raw.githubusercontent.com/Bjoernbom/yap/main/scripts/install.sh | sh</code>
+			<button class="copy" type="button" data-copy="one-liner">Copy</button>
+		</div>
+		<p class="steps"><span id="copy-status" role="status"></span></p>
+		<div class="other">
+			<div>
+				<h3>Homebrew</h3>
+				<p><code>brew install --cask bjoernbom/tap/yap</code></p>
+			</div>
+			<div>
+				<h3>Download</h3>
+				<p>Get the DMG from <a href="https://github.com/Bjoernbom/yap/releases">Releases</a>. yap isn't notarized, so the first launch is blocked once: open System Settings → Privacy &amp; Security and click Open Anyway.</p>
+			</div>
+		</div>
+		<p class="needs">Needs macOS 26 or later, an Apple silicon Mac and about 1 GB free for the speech model. Polish and summaries use Apple Intelligence when it's on.</p>
+	</section>
+</main>
+
+<footer class="wrap">
+	<p class="made">made by <a href="https://github.com/Bjoernbom">bjornbom</a></p>
+	<p>Open source, <a href="https://github.com/Bjoernbom/yap/blob/main/LICENSE">MIT</a>. Pixelify Sans under the <a href="fonts/OFL.txt">SIL Open Font License</a>.</p>
+</footer>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach(function (button) {
+	var source = document.getElementById(button.dataset.copy)
+	var status = document.getElementById('copy-status')
+	function done(ok) {
+		button.textContent = ok ? 'Copied' : 'Copy'
+		status.textContent = ok ? 'Copied to the clipboard.' : 'Selected. Press ⌘C to copy.'
+		setTimeout(function () { button.textContent = 'Copy' }, 2000)
+	}
+	// Older browsers and blocked clipboard access: select the line and copy that.
+	function fallback() {
+		var range = document.createRange()
+		range.selectNodeContents(source)
+		var selection = getSelection()
+		selection.removeAllRanges()
+		selection.addRange(range)
+		var ok = false
+		try { ok = document.execCommand('copy') } catch (e) {}
+		done(ok)
+	}
+	button.addEventListener('click', function () {
+		if (navigator.clipboard && window.isSecureContext) {
+			navigator.clipboard.writeText(source.textContent).then(function () { done(true) }, fallback)
+		} else {
+			fallback()
+		}
+	})
+})
+</script>
+</body>
+</html>
