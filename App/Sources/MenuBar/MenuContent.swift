@@ -62,6 +62,13 @@ struct MenuContent: View {
 			OnboardingOpener.open(model.onboarding, restart: true, with: openWindow)
 		}
 
+		if model.updater.isEnabled {
+			Button("Check for updates…") {
+				model.updater.checkForUpdates()
+			}
+			.disabled(!model.updater.canCheckForUpdates)
+		}
+
 		#if DEBUG
 		Divider()
 

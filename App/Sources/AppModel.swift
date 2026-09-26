@@ -10,6 +10,7 @@ final class AppModel {
 	let text = TextSettingsStore()
 	let onboarding: OnboardingModel
 	let notes: NotesController
+	let updater = AppUpdater()
 
 	#if DEBUG
 	let demo: OverlayDemo

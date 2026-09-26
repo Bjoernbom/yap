@@ -28,6 +28,11 @@ The certificate does not make Gatekeeper happy (only notarization does), and
 users never have to trust it. The install script and Homebrew avoid the
 quarantine flag instead, and Sparkle downloads are not quarantined.
 
+Hardened runtime is on, with one exception: `disable-library-validation`.
+Library validation only loads frameworks signed with the app's Apple Team ID,
+and self-signed or ad-hoc code has none, so it would refuse Sparkle.framework.
+With a Developer ID this entitlement can go.
+
 **Never replace the certificate.** A new one means every user grants
 permissions again. Back up the .p12 and its password (e.g. in a password
 manager). It is valid for 20 years; signatures aren't timestamped (Apple's
