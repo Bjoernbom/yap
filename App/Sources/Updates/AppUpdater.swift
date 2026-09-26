@@ -15,6 +15,7 @@ final class AppUpdater {
 	private(set) var canCheckForUpdates = false
 
 	@ObservationIgnored private let controller: SPUStandardUpdaterController
+	@ObservationIgnored private let reminders: GentleReminders
 	@ObservationIgnored private var observation: NSKeyValueObservation?
 
 	init() {
@@ -24,10 +25,12 @@ final class AppUpdater {
 		let key = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String ?? ""
 		isEnabled = !key.isEmpty
 		#endif
+		let reminders = GentleReminders()
+		self.reminders = reminders
 		controller = SPUStandardUpdaterController(
 			startingUpdater: isEnabled,
 			updaterDelegate: nil,
-			userDriverDelegate: nil
+			userDriverDelegate: reminders
 		)
 		// SPUUpdater lives on the main actor and changes this property there,
 		// so KVO calls back on the main thread.
@@ -41,4 +44,11 @@ final class AppUpdater {
 	func checkForUpdates() {
 		controller.checkForUpdates(nil)
 	}
+}
+
+/// yap is a menu bar app with no Dock icon. When a scheduled update can't
+/// install silently, Sparkle then shows its alert behind the user's work
+/// instead of pulling a background app to the front.
+private final class GentleReminders: NSObject, SPUStandardUserDriverDelegate {
+	var supportsGentleScheduledUpdateReminders: Bool { true }
 }
