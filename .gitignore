@@ -1,10 +1,15 @@
-node_modules/
-dist/
-target/
-*.db
-*.db-journal
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+build/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
 .env
 .env.*
-.DS_Store
-*.tsbuildinfo
 .mcp.json
+# Downloaded models and audio fixtures stay local
+models/
+*.wav
+!Tests/**/Fixtures/*.wav
