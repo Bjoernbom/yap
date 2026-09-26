@@ -39,7 +39,7 @@ struct OverlayLayout: Equatable, Sendable {
 			let width = max((notch?.width ?? 0) + 28, 184)
 			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 20, shoulder: Self.shoulder)
 
-		case .message:
+		case .message, .prompt:
 			let width = max((notch?.width ?? 0) + 28, Self.messageWidth)
 			return Spec(size: CGSize(width: width, height: topBand + Self.strip), bottomRadius: 20, shoulder: Self.shoulder)
 

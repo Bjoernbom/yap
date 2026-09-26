@@ -32,6 +32,8 @@ final class OverlayProbe {
 			("done", .done),
 			("message", .message("Couldn't type here. It's on your clipboard.")),
 			("recording", .recording(since: .now.addingTimeInterval(-754))),
+			("prompt-take-notes", .prompt(.takeNotes)),
+			("prompt-stop-notes", .prompt(.stopNotes)),
 		]
 		overlay.holdsDone = true
 		for (name, state) in states {

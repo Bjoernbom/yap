@@ -50,6 +50,12 @@ final class OverlayController {
 		set { model.onMeetingClick = newValue }
 	}
 
+	/// Called when the user clicks a call prompt.
+	var onPromptClick: ((NotchPrompt) -> Void)? {
+		get { model.onPromptClick }
+		set { model.onPromptClick = newValue }
+	}
+
 	func show(_ state: OverlayState) {
 		dismissTask?.cancel()
 		guard state != .hidden else {
@@ -74,10 +80,10 @@ final class OverlayController {
 		withAnimation(Self.grow) {
 			model.state = state
 		}
-		// Only the meeting notch is clickable (it opens the live
-		// transcript); otherwise clicks go straight through to the menu bar.
-		// Transparent pixels pass clicks through either way.
-		panel.ignoresMouseEvents = state.content != .meeting
+		// Only the meeting notch (it opens the live transcript) and a call
+		// prompt are clickable; otherwise clicks go straight through to the
+		// menu bar. Transparent pixels pass clicks through either way.
+		panel.ignoresMouseEvents = ![.meeting, .prompt].contains(state.content)
 
 		switch state {
 		case .done: scheduleDismiss(of: state, after: Self.doneHold)
@@ -173,6 +179,7 @@ final class OverlayController {
 		case .done: "done"
 		case .message: "message"
 		case .recording: "recording"
+		case .prompt(let prompt): prompt == .takeNotes ? "prompt-take-notes" : "prompt-stop-notes"
 		}
 	}
 	#endif
