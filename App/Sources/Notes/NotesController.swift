@@ -171,7 +171,8 @@ final class NotesController {
 			}
 		}
 		if AppDefaults.store.bool(forKey: Self.consentKey) {
-			overlay.show(.recording(since: since))
+			// A slow start can finish after the call already ended.
+			overlay.show(overlayWhileRecording?() ?? .recording(since: since))
 		} else {
 			AppDefaults.store.set(true, forKey: Self.consentKey)
 			flash(Message.consent)
