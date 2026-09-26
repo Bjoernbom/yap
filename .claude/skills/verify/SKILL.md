@@ -104,6 +104,21 @@ for t in yapkey axdoc clip notify; do swiftc -O .claude/skills/verify/tools/$t.s
 - `notify <name>` posts yap's Debug distributed notifications:
   `com.bjornbom.yap.debug.tryIt` opens the Try it window,
   `com.bjornbom.yap.debug.captureWindows` writes visible windows to PNG.
+- `axdoc … secure` focuses the Try it window's password field and prints
+  its length (0 = nothing typed).
+
+**When the user's own yap is running** (`pgrep -lx yap`), it hears the same
+fn key and the same `tryIt` notification. Never kill it; kill only the pid
+you started. Launch yours with `-trigger rightOption` (argument domain, the
+shared defaults stay untouched) and drive it with `ropt-down`/`ropt-up`;
+pass `pid:<n>` instead of the bundle ID to `yapkey` and `axdoc`; open its
+window with `notify com.bjornbom.yap.debug.tryIt.<pid>`. macOS won't let it
+activate itself from the background, so bring it forward through AX
+(`AXUIElementSetAttributeValue(app, kAXFrontmostAttribute, true)` for that
+pid). Your `say` is audible to the user's yap too: ask for it to be quit.
+
+Try it window: activate it as above, `ropt-down`, `say …`, `ropt-up`, then
+`axdoc pid:<n> "Try it" text`; the log says `Key-up to direct`.
 
 Recipe:
 
@@ -127,8 +142,12 @@ sleep 1.5; $T/axdoc com.apple.TextEdit yap-verify-doc text
 - The log has `Status: …` on every menu status change and
   `Key-up to <outcome>: <ms> ms` per dictation (`zsh` has a `log` builtin,
   hence `/usr/bin/log`). Add `--debug` for `Hotkey start/stop/cancel`.
-- Probes: Esc between fn-down and fn-up (nothing inserted); fn-down, 0.1 s,
-  fn-up (nothing); `-YapModelDelay 15` then press ("Getting ready…");
+- `Key-down to listening shown: <ms> ms` per press: listening waits until
+  the key has been held 150 ms, so a stray tap never shows the notch.
+- Probes: Esc between fn-down and fn-up (nothing inserted); a 0.1 s tap
+  (nothing, and no `listening` capture; `yapkey` sleeps 150 ms after each
+  event, so post down and up from one process for a tap this short);
+  password field in Try it (`secureField`, text on the clipboard); `-YapModelDelay 15` then press ("Getting ready…");
   focus moved: after fn-down, `notify com.bjornbom.yap.debug.tryIt` plus
   `open build/.../yap.app` (macOS refuses self-activation from the
   background) and release with `yapkey com.bjornbom.yap "Try it" fn-up`:
