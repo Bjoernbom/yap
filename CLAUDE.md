@@ -22,11 +22,21 @@ yap 1.0 is a from-scratch rewrite. The old Tauri app (0.4) lives only under the
 ```bash
 swift build          # Build YapKit
 swift test           # Run YapKit tests (Swift Testing)
+make app             # xcodegen generate + Debug build of yap.app into build/
+make run             # Build, quit any running yap, launch it
+make clean           # Remove build/ and the generated yap.xcodeproj
 ```
+
+The app target needs XcodeGen (`brew install xcodegen`). DEBUG builds have a
+Debug submenu in the menu bar menu that drives the notch with fake levels; see
+`App/Sources/Debug/OverlayDemo.swift` for the launch arguments.
 
 ## Layout
 
 ```
+App/Sources/         The app: menu bar, notch overlay, windows (thin, UI only)
+App/Resources/       Bundled resources (Pixelify Sans + its OFL license)
+project.yml          XcodeGen spec for yap.xcodeproj
 Sources/YapKit/      Core logic, grouped by folder: Input, Audio, Speech, Text,
                      Output, Dictation, Notes, Store
 Tests/YapKitTests/   Swift Testing tests

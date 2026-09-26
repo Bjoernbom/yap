@@ -11,10 +11,12 @@ source is under the [`v0.4.0`](https://github.com/Bjoernbom/yap/tree/v0.4.0) tag
 
 ## Build
 
-Requires macOS 26+, Apple Silicon and Xcode 26.
+Requires macOS 26+, Apple Silicon, Xcode 26 and
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
 
 ```bash
-swift test
+swift test   # core logic
+make run     # build the app and launch it
 ```
 
 ## License
