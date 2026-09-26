@@ -11,18 +11,7 @@ struct AcknowledgementsView: View {
 		Group {
 			if let notices {
 				ScrollView {
-					VStack(alignment: .leading, spacing: 28) {
-						ForEach(notices.intro, id: \.self) { paragraph in
-							InlineMarkdown(paragraph)
-								.foregroundStyle(.secondary)
-						}
-						ForEach(notices.sections) { section in
-							NoticesSection(section: section)
-						}
-						LicenseTexts()
-					}
-					.padding(28)
-					.frame(maxWidth: .infinity, alignment: .leading)
+					AcknowledgementsContent(notices: notices)
 				}
 			} else {
 				MissingDocument(document: .notices, title: "Acknowledgements aren't here")
@@ -36,10 +25,30 @@ struct AcknowledgementsView: View {
 		#endif
 	}
 
-	private static func loadNotices() -> ThirdPartyNotices? {
+	static func loadNotices() -> ThirdPartyNotices? {
 		guard let markdown = BundledDocument.notices.load() else { return nil }
 		let notices = ThirdPartyNotices(markdown: markdown)
 		return notices.entries.isEmpty ? nil : notices
+	}
+}
+
+/// The scrolling content, on its own so a DEBUG capture can render all of it.
+struct AcknowledgementsContent: View {
+	let notices: ThirdPartyNotices
+
+	var body: some View {
+		VStack(alignment: .leading, spacing: 28) {
+			ForEach(notices.intro, id: \.self) { paragraph in
+				InlineMarkdown(paragraph)
+					.foregroundStyle(.secondary)
+			}
+			ForEach(notices.sections) { section in
+				NoticesSection(section: section)
+			}
+			LicenseTexts()
+		}
+		.padding(28)
+		.frame(maxWidth: .infinity, alignment: .leading)
 	}
 }
 
@@ -83,13 +92,11 @@ private struct EntryRow: View {
 	var body: some View {
 		VStack(alignment: .leading, spacing: 3) {
 			HStack(alignment: .firstTextBaseline, spacing: 12) {
-				if let url = entry.url {
-					Link(entry.name, destination: url)
-						.fontWeight(.semibold)
-						.help(url.absoluteString)
-				} else {
-					Text(entry.name).fontWeight(.semibold)
-				}
+				// A linked Text rather than `Link`: same click, and it renders
+				// in an `ImageRenderer` capture too.
+				Text(name)
+					.fontWeight(.semibold)
+					.help(entry.url?.absoluteString ?? "")
 				Spacer(minLength: 0)
 				Text(entry.license)
 					.font(.caption)
@@ -108,6 +115,12 @@ private struct EntryRow: View {
 		.padding(.vertical, 11)
 		.frame(maxWidth: .infinity, alignment: .leading)
 		.accessibilityElement(children: .contain)
+	}
+
+	private var name: AttributedString {
+		var name = AttributedString(entry.name)
+		name.link = entry.url
+		return name
 	}
 }
 

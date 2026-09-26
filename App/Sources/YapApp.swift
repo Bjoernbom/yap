@@ -64,6 +64,7 @@ struct YapApp: App {
 		Window("Acknowledgements", id: WindowID.acknowledgements) {
 			AcknowledgementsView()
 		}
+		.defaultSize(width: 540, height: 620)
 		.defaultWindowPlacement { _, _ in WindowPlacement(.center) }
 		.defaultLaunchBehavior(.suppressed)
 		.restorationBehavior(.disabled)
