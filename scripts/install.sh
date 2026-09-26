@@ -124,7 +124,7 @@ fi
 
 # 4. Quit yap if it runs from where we install. Other copies are left alone.
 exe=$dest/Contents/MacOS/yap
-pids=$(ps -axo pid=,comm= | while read -r pid comm; do [ "$comm" = "$exe" ] && echo "$pid"; done; true)
+pids=$(ps -axo pid=,comm= | awk -v exe="$exe" '{ pid = $1; sub(/^ *[0-9]+ /, ""); if ($0 == exe) print pid }')
 if [ -n "$pids" ]; then
 	say "Quitting yap…"
 	# shellcheck disable=SC2086 # one pid per word
