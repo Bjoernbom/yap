@@ -11,13 +11,16 @@ enum OverlayState: Equatable, Sendable {
 	case working
 	/// Text inserted: a tick, then gone.
 	case done
+	/// One short line in yap's voice (the text didn't land, the model isn't
+	/// ready yet), then gone.
+	case message(String)
 	/// Taking meeting notes: red dot and a timer.
 	case recording(since: Date)
 
 	/// States that share a view, so switching between them animates in
 	/// place instead of cross-fading.
 	enum Content: Equatable {
-		case none, waveform, tick, meeting
+		case none, waveform, tick, message, meeting
 	}
 
 	var content: Content {
@@ -25,6 +28,7 @@ enum OverlayState: Equatable, Sendable {
 		case .hidden: .none
 		case .listening, .working: .waveform
 		case .done: .tick
+		case .message: .message
 		case .recording: .meeting
 		}
 	}

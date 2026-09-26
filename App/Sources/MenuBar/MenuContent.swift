@@ -9,7 +9,24 @@ struct MenuContent: View {
 	var body: some View {
 		Text(model.statusLine)
 
+		if model.dictation.needsPermissions {
+			Button("Grant access…") {
+				Task { await model.dictation.grantAccess() }
+			}
+		}
+
 		Divider()
+
+		// ⌃⌘V also works while another app is frontmost: `GlobalHotKey`
+		// registers it system-wide. The shortcut here is what the menu shows.
+		Button("Paste last") {
+			// Let the menu close and focus settle back on the user's app first.
+			Task {
+				try? await Task.sleep(for: .milliseconds(150))
+				model.dictation.pasteLast()
+			}
+		}
+		.keyboardShortcut("v", modifiers: [.control, .command])
 
 		Button(model.isTakingNotes ? "Stop notes" : "Start notes") {
 			model.toggleNotes()
@@ -32,6 +49,11 @@ struct MenuContent: View {
 		Divider()
 
 		Menu("Debug") {
+			Button("Try it window") {
+				bringToFront()
+				openWindow(id: WindowID.tryIt)
+			}
+			Divider()
 			Button("Cycle overlay states") { model.demo.cycle() }
 			Button("Rapid-fire overlay states") { model.demo.rapidCycle() }
 			Divider()
@@ -60,4 +82,7 @@ struct MenuContent: View {
 
 enum WindowID {
 	static let history = "history"
+	#if DEBUG
+	static let tryIt = "try-it"
+	#endif
 }

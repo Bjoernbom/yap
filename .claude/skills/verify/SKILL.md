@@ -71,6 +71,80 @@ display (Preview with any PNG works; click its green button through the
 computer-use `app_click`), then run the probe with `-YapOverlayScreen notch`.
 Don't commandeer windows other agents are using (e.g. TextEdit spike docs).
 
+## End-to-end dictation
+
+Real mic, real model, real insertion. **Safety first:** synthetic keys and
+inserted text may only ever reach a window you opened for the test. Never
+post a key unless the frontmost app *and* its focused window are yours
+(`yapkey` checks both right before every event and refuses otherwise).
+
+Permissions: `make run` launches through LaunchServices, so the ad-hoc build
+is its own TCC identity and has nothing; the menu then shows "Needs
+Microphone and Accessibility" and a Grant access item (check this, but don't
+click it: it prompts the user). For dictation, launch the binary directly
+from the shell instead; it inherits the shell's Microphone, Accessibility and
+Post Events grants.
+
+Tools (sources in `tools/`, build once into a scratch dir):
+
+```bash
+T=<scratch>/tools; mkdir -p $T
+for t in yapkey axdoc clip notify; do swiftc -O .claude/skills/verify/tools/$t.swift -o $T/$t; done
+```
+
+- `yapkey <bundle> <title> fn-down|fn-up|ropt-down|ropt-up|esc|pastelast`
+  posts one event after checking focus. It waits 150 ms before exiting: a
+  poster that exits right after `CGEvent.post` sometimes loses the event
+  (seen as a lost release, which leaves yap listening).
+- `axdoc <bundle> <title> front|text|clear` checks focus, reads or clears
+  the window's text area through AX. Don't script TextEdit with AppleScript:
+  it pops an Automation consent dialog on the user's screen.
+- `clip save|restore <file>` / `clip read`: snapshot the user's clipboard
+  before probing and restore it after anything that leaves text on it.
+- `notify <name>` posts yap's Debug distributed notifications:
+  `com.bjornbom.yap.debug.tryIt` opens the Try it window,
+  `com.bjornbom.yap.debug.captureWindows` writes visible windows to PNG.
+
+Recipe:
+
+```bash
+APP=build/Build/Products/Debug/yap.app/Contents/MacOS/yap
+$T/clip save <scratch>/clipboard.plist
+$APP -YapHistoryPath <scratch>/history.sqlite -YapCaptureDir <scratch>/cap -YapOverlayScreen notch &
+: > <scratch>/yap-verify-doc.txt; open -a TextEdit <scratch>/yap-verify-doc.txt
+$T/axdoc com.apple.TextEdit yap-verify-doc front          # must pass
+$T/yapkey com.apple.TextEdit yap-verify-doc fn-down && sleep 0.25
+say -v Alva "Kan du skicka rapporten till Anna innan lunch?"
+sleep 0.4; $T/yapkey com.apple.TextEdit yap-verify-doc fn-up
+sleep 1.5; $T/axdoc com.apple.TextEdit yap-verify-doc text
+/usr/bin/log show --last 1m --style compact --info --predicate 'subsystem == "com.bjornbom.yap"'
+```
+
+- `-YapHistoryPath` keeps test dictations out of the real history.
+- `-YapCaptureDir` writes every notch state the app shows to
+  `NN-<state>.png` (listening three times, so real levels show; working
+  right away, it lasts ~100 ms warm).
+- The log has `Status: …` on every menu status change and
+  `Key-up to <outcome>: <ms> ms` per dictation (`zsh` has a `log` builtin,
+  hence `/usr/bin/log`). Add `--debug` for `Hotkey start/stop/cancel`.
+- Probes: Esc between fn-down and fn-up (nothing inserted); fn-down, 0.1 s,
+  fn-up (nothing); `-YapModelDelay 15` then press ("Getting ready…");
+  focus moved: after fn-down, `notify com.bjornbom.yap.debug.tryIt` plus
+  `open build/.../yap.app` (macOS refuses self-activation from the
+  background) and release with `yapkey com.bjornbom.yap "Try it" fn-up`:
+  nothing typed, text on the clipboard, "You switched apps." in the notch;
+  `pastelast` with the doc frontmost. Switch the trigger in Settings through
+  System Events (`pop up button "Push to talk"` in window "yap Settings"),
+  then use `ropt-down`/`ropt-up`; switch it back to fn afterwards, since
+  UserDefaults are shared with the user's own yap.
+- A locked history: hold `BEGIN EXCLUSIVE` on the `-YapHistoryPath` file
+  with `sqlite3` for 20 s; dictation still inserts, the log shows retries,
+  then `History open`.
+- Windows: `screencapture` needs Screen Recording; `captureWindows` asks the
+  window server for yap's own windows instead, which needs no permission.
+
+Close only your own document afterwards and restore the clipboard.
+
 ## Idle CPU
 
 ```bash
@@ -78,7 +152,8 @@ ps -o cputime= -p $(pgrep -x yap); sleep 10; ps -o cputime= -p $(pgrep -x yap)
 ```
 
 Expect no change with the notch hidden. While listening it is ~7% (30 fps
-redraw); the shimmer runs at 60 fps.
+redraw); the shimmer runs at 60 fps. Memory with the model warm:
+`footprint $(pgrep -x yap)` (M1: 56 MB footprint, 579 MB `neural`).
 
 ## Quit and clean up
 

@@ -60,6 +60,21 @@ struct OverlayView: View {
 			}
 			.transition(.opacity.combined(with: .scale(scale: 0.8)))
 
+		case .message:
+			if case .message(let text) = model.state {
+				belowNotch(layout: layout) {
+					Text(text)
+						.font(.system(size: 13, weight: .medium))
+						.foregroundStyle(Palette.ink)
+						.lineLimit(1)
+						.minimumScaleFactor(0.8)
+						.padding(.horizontal, 18)
+						// A new line while one is showing (download progress) swaps in place.
+						.contentTransition(.opacity)
+				}
+				.transition(.opacity)
+			}
+
 		case .meeting:
 			if case .recording(let since) = model.state {
 				meeting(since: since, layout: layout)

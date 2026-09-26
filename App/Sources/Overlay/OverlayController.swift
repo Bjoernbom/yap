@@ -10,6 +10,8 @@ final class OverlayController {
 	private static let shrink = Animation.spring(duration: 0.2, bounce: 0)
 	/// How long the tick stays before the notch closes.
 	private static let doneHold: Duration = .milliseconds(850)
+	/// Long enough to read one line, short enough not to linger.
+	private static let messageHold: Duration = .milliseconds(2600)
 
 	private let model: OverlayModel
 	private var panel: NotchPanel?
@@ -23,6 +25,10 @@ final class OverlayController {
 	/// The live panel, for the verification probe.
 	var debugPanel: NSPanel? { panel }
 	var debugGeometry: NotchGeometry { model.geometry }
+	/// When set (`-YapCaptureDir`), every shown state is written to a PNG
+	/// once its animation settled, so real dictations can be reviewed.
+	var captureDirectory: URL?
+	private var captureCount = 0
 	#endif
 
 	init() {
@@ -63,9 +69,15 @@ final class OverlayController {
 			model.state = state
 		}
 
-		if state == .done {
-			scheduleDismiss()
+		switch state {
+		case .done: scheduleDismiss(of: state, after: Self.doneHold)
+		case .message: scheduleDismiss(of: state, after: Self.messageHold)
+		default: break
 		}
+
+		#if DEBUG
+		capture(state)
+		#endif
 	}
 
 	func hide() {
@@ -98,16 +110,53 @@ final class OverlayController {
 		levelTask = nil
 	}
 
-	private func scheduleDismiss() {
+	private func scheduleDismiss(of state: OverlayState, after hold: Duration) {
 		#if DEBUG
 		if holdsDone { return }
 		#endif
 		dismissTask = Task { [weak self] in
-			try? await Task.sleep(for: Self.doneHold)
-			guard !Task.isCancelled, let self, self.model.state == .done else { return }
+			try? await Task.sleep(for: hold)
+			guard !Task.isCancelled, let self, self.model.state == state else { return }
 			self.hide()
 		}
 	}
+
+	#if DEBUG
+	private func capture(_ state: OverlayState) {
+		guard let directory = captureDirectory else { return }
+		captureCount += 1
+		let prefix = String(format: "%02d-", captureCount) + Self.slug(for: state)
+		// Working lasts ~100 ms with a warm model, so catch it right away. The
+		// others once the spring has settled; listening a few more times, since
+		// speech starts a moment after the key.
+		let delays: [Duration] = switch state {
+		case .working: [.milliseconds(30)]
+		case .listening: [.milliseconds(420), .milliseconds(1500), .milliseconds(3000)]
+		default: [.milliseconds(420)]
+		}
+		Task { [weak self] in
+			var elapsed = Duration.zero
+			for (index, delay) in delays.enumerated() {
+				try? await Task.sleep(for: delay - elapsed)
+				elapsed = delay
+				guard let self, self.model.state == state, let view = self.panel?.contentView else { return }
+				let suffix = index == 0 ? "" : "-\(index + 1)"
+				PanelCapture.write(view, to: directory.appending(path: prefix + suffix + ".png"))
+			}
+		}
+	}
+
+	private static func slug(for state: OverlayState) -> String {
+		switch state {
+		case .hidden: "hidden"
+		case .listening: "listening"
+		case .working: "working"
+		case .done: "done"
+		case .message: "message"
+		case .recording: "recording"
+		}
+	}
+	#endif
 
 	private func makePanel() -> NotchPanel {
 		let layout = OverlayLayout(geometry: model.geometry)
