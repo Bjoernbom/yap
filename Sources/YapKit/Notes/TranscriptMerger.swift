@@ -18,9 +18,12 @@ enum TranscriptMerger {
 			   segment.end - last.start <= maxLength {
 				last.text = TranscriptJoiner.join([last.text, text])
 				last.end = max(last.end, segment.end)
+				last.words += segment.words
 				merged[merged.count - 1] = last
 			} else {
-				merged.append(NoteSegment(speaker: segment.speaker, start: segment.start, end: segment.end, text: text))
+				var paragraph = segment
+				paragraph.text = text
+				merged.append(paragraph)
 			}
 		}
 		return merged

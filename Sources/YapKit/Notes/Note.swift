@@ -26,12 +26,16 @@ public struct NoteSegment: Sendable, Equatable {
 	public var start: Double
 	public var end: Double
 	public var text: String
+	/// The words of `text` in meeting time, when the engine gave timings.
+	/// Echo removal uses them to tell the user's own words from the call's.
+	public var words: [TimedWord]
 
-	public init(speaker: Speaker, start: Double, end: Double, text: String) {
+	public init(speaker: Speaker, start: Double, end: Double, text: String, words: [TimedWord] = []) {
 		self.speaker = speaker
 		self.start = start
 		self.end = end
 		self.text = text
+		self.words = words
 	}
 }
 

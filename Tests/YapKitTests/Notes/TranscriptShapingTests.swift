@@ -101,9 +101,47 @@ struct EchoFilterTests {
 		#expect(EchoFilter.removeEcho(from: segments) == segments)
 	}
 
-	@Test func longestCommonSubsequence() {
-		#expect(EchoFilter.longestCommonSubsequence(["a", "b", "c", "d"], ["a", "c", "d", "e"]) == 3)
-		#expect(EchoFilter.longestCommonSubsequence([], ["a"]) == 0)
+	@Test func theUsersLastWordsSurviveWhenEchoFollowsInTheSameChunk() {
+		// The VAD didn't cut in the short pause, so one chunk holds the end of
+		// the user's question and the start of the answer leaking in.
+		let segments = [
+			segment(.them(nil), 33, 38, "I will fix the Swedish characters in the export before Tuesday."),
+			segment(.you, 30, 37, "What about the CSV export bug? I will fix the Swedish characters in the"),
+		]
+		let kept = EchoFilter.removeEcho(from: segments)
+		#expect(kept.map(\.text) == ["I will fix the Swedish characters in the export before Tuesday.", "What about the CSV export bug?"])
+	}
+
+	@Test func withTimingsTheUsersOwnWordsBeforeTheEchoStay() {
+		// "bug?" was said before the answer started; the rest is the answer
+		// leaking in, one word misheard.
+		let you = NoteSegment(speaker: .you, start: 32.4, end: 36, text: "", words: [
+			TimedWord(text: "bug?", start: 32.4, end: 32.8),
+			TimedWord(text: "I", start: 33.1, end: 33.2), TimedWord(text: "will", start: 33.2, end: 33.4),
+			TimedWord(text: "fix", start: 33.4, end: 33.7), TimedWord(text: "those", start: 33.7, end: 33.9),
+			TimedWord(text: "Swedish", start: 33.9, end: 34.4), TimedWord(text: "characters.", start: 34.4, end: 35),
+		])
+		let them = segment(.them(nil), 33, 36, "I will fix the Swedish characters.")
+		let kept = EchoFilter.removeEcho(from: [them, you])
+		#expect(kept.map(\.text) == ["I will fix the Swedish characters.", "bug?"])
+		#expect(kept.last?.start == 32.4 && kept.last?.end == 32.8)
+	}
+
+	@Test func withTimingsWordsAfterTheOtherSideStoppedStay() {
+		let you = NoteSegment(speaker: .you, start: 10, end: 16, text: "", words: [
+			TimedWord(text: "ship", start: 10, end: 10.3), TimedWord(text: "on", start: 10.3, end: 10.5),
+			TimedWord(text: "Friday", start: 10.5, end: 11), TimedWord(text: "then.", start: 11, end: 11.4),
+			TimedWord(text: "Sounds", start: 14, end: 14.4), TimedWord(text: "good", start: 14.4, end: 14.8),
+			TimedWord(text: "to", start: 14.8, end: 15), TimedWord(text: "me.", start: 15, end: 15.4),
+		])
+		let them = segment(.them(nil), 10, 11.5, "Ship on Friday then.")
+		let kept = EchoFilter.removeEcho(from: [them, you])
+		#expect(kept.last?.text == "Sounds good to me.")
+	}
+
+	@Test func matchesFindTheCommonSubsequence() {
+		#expect(EchoFilter.matches(["a", "b", "c", "d"], ["a", "c", "d", "e"]) == [0, 2, 3])
+		#expect(EchoFilter.matches([], ["a"]).isEmpty)
 	}
 }
 

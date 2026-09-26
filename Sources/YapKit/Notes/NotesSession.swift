@@ -336,7 +336,10 @@ public actor NotesSession {
 		let end = max(timeline.meetingTime(stream: streamEnd), start)
 		switch id {
 		case .you:
-			youSegments.append(NoteSegment(speaker: .you, start: start, end: end, text: text))
+			let words = report.words.map {
+				TimedWord(text: $0.text, start: timeline.meetingTime(stream: $0.start), end: timeline.meetingTime(stream: $0.end))
+			}
+			youSegments.append(NoteSegment(speaker: .you, start: start, end: end, text: text, words: words))
 		case .them:
 			themPieces.append(ThemPiece(
 				segment: NoteSegment(speaker: .them(nil), start: start, end: end, text: text),
