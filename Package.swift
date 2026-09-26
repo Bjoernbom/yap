@@ -23,5 +23,8 @@ let package = Package(
 		.testTarget(name: "YapKitTests", dependencies: ["YapKit"]),
 		// Dev harness: exercises the real MicCapture on this Mac (latency, levels, probes).
 		.executableTarget(name: "yap-harness-mic", dependencies: ["YapKit"]),
+		// Dev harness: drives DictationSession through the public API with
+		// scripted fakes and the real history store.
+		.executableTarget(name: "yap-harness-session", dependencies: ["YapKit"]),
 	]
 )
