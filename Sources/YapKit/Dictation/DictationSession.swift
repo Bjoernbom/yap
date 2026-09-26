@@ -258,6 +258,7 @@ public actor DictationSession {
 		guard seconds >= configuration.minimumSpeechDuration else {
 			await transcription.cancel()
 			guard isFinishing(recording.id) else { return }
+			logger.notice("Empty: \(seconds, format: .fixed(precision: 2), privacy: .public) s of audio, too short to transcribe")
 			end(.empty)
 			return
 		}
@@ -279,6 +280,9 @@ public actor DictationSession {
 			: await processor.process(trimmed, for: recording.target).trimmingCharacters(in: .whitespacesAndNewlines)
 		guard isFinishing(recording.id) else { return }
 		guard !text.isEmpty else {
+			// Blank from the engine on seconds of audio usually means the mic
+			// delivered silence: muted, the wrong device, or taken by another app.
+			logger.notice("Empty: \(seconds, format: .fixed(precision: 2), privacy: .public) s of audio, blank transcript")
 			end(.empty)
 			return
 		}

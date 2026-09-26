@@ -447,14 +447,14 @@ final class DictationController {
 				overlay.show(.done)
 			}
 		case .empty:
-			keyUpAt = nil
+			logKeyUp(to: "empty")
 			if pressWasStray {
 				overlay.hide(animated: false)
 			} else {
 				overlay.show(.message(Message.emptyTranscript))
 			}
 		case .failed(let message):
-			keyUpAt = nil
+			logKeyUp(to: "failed")
 			overlay.show(.message(message))
 		}
 	}
@@ -520,6 +520,14 @@ final class DictationController {
 		self.keyUpAt = nil
 		let milliseconds = Self.milliseconds(since: keyUpAt)
 		Logger.dictation.notice("Key-up to \(String(describing: outcome), privacy: .public): \(milliseconds, format: .fixed(precision: 1), privacy: .public) ms")
+	}
+
+	/// Key-up → a dictation that inserted nothing. Logged like insertions, so a
+	/// run of "didn't catch that" shows up in the log instead of as silence.
+	private func logKeyUp(to outcome: String) {
+		guard let keyUpAt else { return }
+		self.keyUpAt = nil
+		Logger.dictation.notice("Key-up to \(outcome, privacy: .public): \(Self.milliseconds(since: keyUpAt), format: .fixed(precision: 1), privacy: .public) ms")
 	}
 
 	private static func milliseconds(since instant: ContinuousClock.Instant) -> Double {
