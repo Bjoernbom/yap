@@ -182,6 +182,12 @@ public actor Summarizer {
 		return outcome ?? SummaryOutcome(notice: "No summary: it took too long. The transcript is complete.")
 	}
 
+	/// Returns once every section queued so far is mapped. For tests: the map
+	/// calls run in unstructured tasks, so nothing else says when they ran.
+	func mappedQueuedSections() async {
+		_ = await chain.value
+	}
+
 	private func enqueue(_ section: TranscriptSection) async {
 		if language == nil {
 			let code = Self.languageCode(of: section.text)

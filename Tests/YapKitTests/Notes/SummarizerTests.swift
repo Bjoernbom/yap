@@ -99,7 +99,7 @@ struct SummarizerTests {
 			await summarizer.observe(segments.filter { $0.end <= now }, now: now)
 		}
 		// Let the queued map calls run.
-		try? await Task.sleep(for: .milliseconds(100))
+		await summarizer.mappedQueuedSections()
 		let mappedLive = await model.mapped.count
 		#expect(mappedLive >= 4)
 
