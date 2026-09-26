@@ -30,7 +30,7 @@ Everything here is yours to run; nothing in the repo does it for you.
    Without them a tag still makes a pre-release, but ad-hoc signed and
    without an appcast entry (a test build).
 4. **Homebrew tap.** Create the public repo `Bjoernbom/homebrew-tap` with a
-   `Casks/` folder. Users then run `brew install --cask bjornbom/tap/yap`.
+   `Casks/` folder. Users then run `brew install --cask bjoernbom/tap/yap`.
 5. The release workflow pushes `appcast.xml` to main. If you protect main
    later, let `github-actions[bot]` push or the appcast step fails.
 

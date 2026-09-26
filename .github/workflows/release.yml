@@ -82,7 +82,7 @@ jobs:
             echo "curl -fsSL https://github.com/Bjoernbom/yap/releases/download/$TAG/install.sh | sh"
             echo '```'
             echo
-            echo "Or \`brew install --cask bjornbom/tap/yap\`, or the DMG below (first launch: System Settings → Privacy & Security → Open Anyway)."
+            echo "Or \`brew install --cask bjoernbom/tap/yap\`, or the DMG below (first launch: System Settings → Privacy & Security → Open Anyway)."
             if [ "$MODE" != release ]; then
               echo
               echo "**Test build:** not signed with the release certificate or Sparkle key."
