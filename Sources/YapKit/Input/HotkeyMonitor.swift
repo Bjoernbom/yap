@@ -45,6 +45,12 @@ public final class HotkeyMonitor: HotkeySource {
 		shared.withLock { $0.tap != nil }
 	}
 
+	/// The trigger key is physically down right now. A short tap emits no action on release
+	/// (it may become a double-tap), so this is how the UI tells a hold from a tap in flight.
+	public var isTriggerHeld: Bool {
+		shared.withLock { $0.interpreter.triggerHeld }
+	}
+
 	public func actions() -> AsyncStream<HotkeyAction> {
 		let (stream, continuation) = AsyncStream.makeStream(of: HotkeyAction.self, bufferingPolicy: .bufferingNewest(32))
 		let id = shared.withLock { state in
