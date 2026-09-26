@@ -148,6 +148,18 @@ Observed (from `yapio.app`):
   `TapAutoStart`, main sub-device = default output, tap list with drift compensation) →
   `AudioDeviceCreateIOProcIDWithBlock` → `AudioDeviceStart`. Tear down in reverse.
 
+M3 (`SystemAudioTap`, checked with `-YapNotesProbe` in the Debug app):
+- Mono tap (`monoGlobalTapButExcludeProcesses`), so the IOProc gets one channel and no
+  downmix is needed. Excluding yap by bundle id (`bundleIDs`) also works before yap has
+  a process object; a tap on yap's own pid is the control and hears yap's sound.
+- With permission and nothing playing: 0 callbacks in 3 s. **Without permission (bare
+  CLI) callbacks run even when nothing plays** (107 in 2 s), all zeros. So "callbacks
+  but only zeros" is the blocked signature, and `looksBlocked` fired from the CLI.
+- First callback ~740 ms after start in a fresh process (includes waiting for afplay,
+  started at 500 ms). Stop/start 10× with 100 ms captures: no failures, teardown clean.
+- Output device changes rebuild the aggregate in the same stream; not exercised with a
+  physical device switch yet (manual).
+
 ```swift
 public final class SystemAudioTap: Sendable {
 	public enum Target: Sendable { case allExcept(pids: [pid_t]), processes([pid_t]), bundleIDs([String]) }

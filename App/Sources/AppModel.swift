@@ -26,6 +26,8 @@ final class AppModel {
 		// The overlay probe and snapshots drive the notch themselves and quit;
 		// loading the speech model for them would only cost memory.
 		startsDictation = defaults.string(forKey: "YapProbe") == nil && defaults.string(forKey: "YapSnapshots") == nil
+		startsDictation = startsDictation && !NotesProbe.isRequested
+		NotesProbe.shared.applyLaunchArguments()
 		#endif
 		if startsDictation {
 			dictation.start()
