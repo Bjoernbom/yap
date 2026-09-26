@@ -25,6 +25,23 @@ struct DebugWindowOpener: ViewModifier {
 				NSApp.activate()
 				openWindow(id: WindowID.tryIt)
 			}
+			.onReceive(DistributedNotificationCenter.default().publisher(for: Self.captureNotification)) { _ in
+				captureWindows()
+			}
+	}
+
+	/// Writes every visible titled window to `-YapCaptureDir`, since
+	/// `screencapture` needs Screen Recording permission.
+	static let captureNotification = Notification.Name("com.bjornbom.yap.debug.captureWindows")
+
+	private func captureWindows() {
+		guard let directory = UserDefaults.standard.string(forKey: "YapCaptureDir").map({ URL(filePath: $0) }) else { return }
+		for window in NSApp.windows where window.isVisible && !window.title.isEmpty {
+			// The frame view includes the title bar and toolbar.
+			guard let view = window.contentView?.superview ?? window.contentView else { continue }
+			let slug = window.title.lowercased().replacingOccurrences(of: " ", with: "-")
+			PanelCapture.write(view, to: directory.appending(path: "window-\(slug).png"))
+		}
 	}
 }
 #endif

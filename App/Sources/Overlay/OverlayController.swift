@@ -125,13 +125,24 @@ final class OverlayController {
 	private func capture(_ state: OverlayState) {
 		guard let directory = captureDirectory else { return }
 		captureCount += 1
-		let name = String(format: "%02d-", captureCount) + Self.slug(for: state) + ".png"
-		// Working is caught mid-shimmer; the others once the spring has settled.
-		let delay: Duration = state == .working ? .milliseconds(120) : .milliseconds(420)
+		let prefix = String(format: "%02d-", captureCount) + Self.slug(for: state)
+		// Working lasts ~100 ms with a warm model, so catch it right away. The
+		// others once the spring has settled; listening a few more times, since
+		// speech starts a moment after the key.
+		let delays: [Duration] = switch state {
+		case .working: [.milliseconds(30)]
+		case .listening: [.milliseconds(420), .milliseconds(1500), .milliseconds(3000)]
+		default: [.milliseconds(420)]
+		}
 		Task { [weak self] in
-			try? await Task.sleep(for: delay)
-			guard let self, self.model.state == state, let view = self.panel?.contentView else { return }
-			PanelCapture.write(view, to: directory.appending(path: name))
+			var elapsed = Duration.zero
+			for (index, delay) in delays.enumerated() {
+				try? await Task.sleep(for: delay - elapsed)
+				elapsed = delay
+				guard let self, self.model.state == state, let view = self.panel?.contentView else { return }
+				let suffix = index == 0 ? "" : "-\(index + 1)"
+				PanelCapture.write(view, to: directory.appending(path: prefix + suffix + ".png"))
+			}
 		}
 	}
 
