@@ -37,10 +37,14 @@ struct DebugWindowOpener: ViewModifier {
 	private func captureWindows() {
 		guard let directory = UserDefaults.standard.string(forKey: "YapCaptureDir").map({ URL(filePath: $0) }) else { return }
 		for window in NSApp.windows where window.isVisible && !window.title.isEmpty {
-			// The frame view includes the title bar and toolbar.
-			guard let view = window.contentView?.superview ?? window.contentView else { continue }
 			let slug = window.title.lowercased().replacingOccurrences(of: " ", with: "-")
-			PanelCapture.write(view, to: directory.appending(path: "window-\(slug).png"))
+			let url = directory.appending(path: "window-\(slug).png")
+			// Lists draw through layers only, which `cacheDisplay` leaves blank.
+			if PanelCapture.writeWindowServerImage(of: window, to: url) { continue }
+			// The frame view includes the title bar and toolbar.
+			if let view = window.contentView?.superview ?? window.contentView {
+				PanelCapture.write(view, to: url)
+			}
 		}
 	}
 }
