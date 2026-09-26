@@ -69,6 +69,9 @@ func runTranscribe(_ options: Options) async throws {
 	let warmStart = clock.now
 	await engine.warmUp()
 	let warmTime = milliseconds(clock.now - warmStart)
+	// The Neural Engine clocks down within seconds of idle; this shows the
+	// cost of a call that comes after a quiet stretch of dictation.
+	if let idle = options.idle { try await clock.sleep(for: .seconds(idle)) }
 	let start = clock.now
 	let transcript = try await engine.transcribe(samples)
 	let report = TranscribeReport(
@@ -89,6 +92,8 @@ struct StreamReport: Codable {
 	struct Chunk: Codable {
 		var index: Int
 		var reason: String
+		/// Where the chunk begins in the file.
+		var startSeconds: Double
 		var audioSeconds: Double
 		var latencyMilliseconds: Double
 		/// Wall time since the first append when the chunk's text was ready.
@@ -121,11 +126,14 @@ func runStream(_ options: Options) async throws {
 
 	let chunks = Mutex<[StreamReport.Chunk]>([])
 	let feedStart = Mutex<ContinuousClock.Instant?>(nil)
-	let transcriber = StreamingTranscriber(engine: engine, vad: vad) { report in
+	var policy = ChunkPolicy.dictation
+	if let maxChunk = options.maxChunk { policy.maxChunk = maxChunk }
+	let transcriber = StreamingTranscriber(engine: engine, vad: vad, policy: policy) { report in
 		let readyAt = feedStart.withLock { $0.map { clock.now - $0 } } ?? .zero
 		chunks.withLock {
 			$0.append(StreamReport.Chunk(
-				index: report.index, reason: report.reason.rawValue, audioSeconds: report.duration,
+				index: report.index, reason: report.reason.rawValue, startSeconds: report.start,
+				audioSeconds: report.duration,
 				latencyMilliseconds: milliseconds(report.latency),
 				readyAtSeconds: milliseconds(readyAt) / 1000, text: report.text))
 		}
@@ -178,7 +186,7 @@ func runStream(_ options: Options) async throws {
 	if options.json { return try printJSON(report) }
 	print("\(report.file): \(format(report.audioSeconds, 1)) s of audio, model \(report.model), speed \(report.speed == 0 ? "max" : format(report.speed, 1) + "×"), \(report.pieceMilliseconds) ms appends, fed in \(format(report.feedSeconds, 2)) s")
 	for chunk in report.chunks {
-		print("  #\(chunk.index) \(chunk.reason.padding(toLength: 7, withPad: " ", startingAt: 0)) \(format(chunk.audioSeconds, 2)) s audio  \(format(chunk.latencyMilliseconds, 0)) ms  ready at \(format(chunk.readyAtSeconds, 2)) s  \"\(chunk.text)\"")
+		print("  #\(chunk.index) \(chunk.reason.padding(toLength: 7, withPad: " ", startingAt: 0)) at \(format(chunk.startSeconds, 2)) s  \(format(chunk.audioSeconds, 2)) s audio  \(format(chunk.latencyMilliseconds, 0)) ms  ready at \(format(chunk.readyAtSeconds, 2)) s  \"\(chunk.text)\"")
 	}
 	if report.cancelled { print("cancelled after \(format(options.cancelAfter ?? 0, 1)) s") }
 	print("end of audio -> final text: \(format(report.finalLatencyMilliseconds, 1)) ms")

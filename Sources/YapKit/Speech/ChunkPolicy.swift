@@ -68,6 +68,8 @@ struct SpeechChunk: Sendable, Equatable {
 	/// Length of the real audio before padding, in seconds.
 	var duration: Double
 	var reason: ChunkCut
+	/// Where the chunk's audio begins, in seconds since the stream began.
+	var start: Double = 0
 }
 
 /// Decides where to cut, one VAD hop at a time. Pure and synchronous so the
@@ -84,6 +86,8 @@ struct Chunker: Sendable {
 	/// Sample count (since the stream began) when the current silence began.
 	private var silenceStart: Int?
 	private var processed = 0
+	/// Samples handed out in earlier chunks; where `pending` begins.
+	private var emitted = 0
 	/// Any hop at or above the speech threshold since the last cut.
 	private var heardSpeech = false
 
@@ -121,7 +125,7 @@ struct Chunker: Sendable {
 		defer { reset() }
 		if pending.isEmpty { return nil }
 		if duration < policy.minTail && !hasSpeech { return nil }
-		return SpeechChunk(samples: padded(pending), duration: duration, reason: .tail)
+		return SpeechChunk(samples: padded(pending), duration: duration, reason: .tail, start: seconds(emitted))
 	}
 
 	/// Mirrors FluidAudio's Silero streaming state machine, which the spike's
@@ -151,7 +155,13 @@ struct Chunker: Sendable {
 		// Whatever stays behind a forced cut may already hold speech.
 		heardSpeech = triggered || hops.contains { $0.probability >= policy.speechThreshold }
 		let duration = Double(audio.count) / AudioChunk.sampleRate
-		return SpeechChunk(samples: padded(audio), duration: duration, reason: reason)
+		let start = seconds(emitted)
+		emitted += audio.count
+		return SpeechChunk(samples: padded(audio), duration: duration, reason: reason, start: start)
+	}
+
+	private func seconds(_ samples: Int) -> Double {
+		Double(samples) / AudioChunk.sampleRate
 	}
 
 	private func padded(_ audio: [Float]) -> [Float] {

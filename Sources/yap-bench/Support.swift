@@ -16,6 +16,10 @@ struct Options {
 	var cancelAfter: Double?
 	var finishTwice = false
 	var concurrent = false
+	/// Overrides `ChunkPolicy.maxChunk`, to force cuts inside sentences.
+	var maxChunk: Double?
+	/// Seconds to wait between warm-up and the measured call.
+	var idle: Double?
 
 	init(_ arguments: [String]) throws {
 		var rest = arguments[...]
@@ -40,6 +44,12 @@ struct Options {
 			case "--piece-ms":
 				guard let piece = Int(try value()), piece > 0 else { throw BenchError.usage("bad --piece-ms") }
 				pieceMilliseconds = piece
+			case "--max-chunk":
+				guard let seconds = Double(try value()), seconds > 1 else { throw BenchError.usage("bad --max-chunk") }
+				maxChunk = seconds
+			case "--idle":
+				guard let seconds = Double(try value()), seconds >= 0 else { throw BenchError.usage("bad --idle") }
+				idle = seconds
 			case "--cancel-after":
 				guard let seconds = Double(try value()), seconds >= 0 else { throw BenchError.usage("bad --cancel-after") }
 				cancelAfter = seconds

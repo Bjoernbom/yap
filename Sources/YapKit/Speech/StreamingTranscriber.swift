@@ -13,6 +13,8 @@ public actor StreamingTranscriber: StreamingTranscription {
 		/// Seconds of real audio, before padding.
 		public var duration: Double
 		public var reason: ChunkCut
+		/// Where the chunk begins, in seconds since `begin`.
+		public var start: Double
 		/// Wall time of the engine call.
 		public var latency: Duration
 		public var text: String
@@ -157,7 +159,7 @@ public actor StreamingTranscriber: StreamingTranscription {
 			texts.append(transcript.text)
 			onChunk?(ChunkReport(
 				index: index, duration: chunk.duration,
-				reason: chunk.reason,
+				reason: chunk.reason, start: chunk.start,
 				latency: clock.now - start, text: transcript.text))
 			index += 1
 		}
