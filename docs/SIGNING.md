@@ -58,13 +58,22 @@ cd ~/yap-signing
 # Import certificate + key; only codesign may use the key without asking.
 security import yap-signing.p12 -k ~/Library/Keychains/login.keychain-db \
 	-P "$(cat yap-signing.password)" -T /usr/bin/codesign
-# Trust it for code signing (asks for your password). Xcode only offers
-# trusted identities; the codesign tool alone doesn't need this.
+# Trust it for code signing (asks for your password). Only Xcode needs
+# this: it offers valid, i.e. trusted, identities only.
 security add-trusted-cert -r trustRoot -p codeSign \
 	-k ~/Library/Keychains/login.keychain-db yap-signing.cer.pem
 # Must list "yap self-signed (bjornbom)" as a valid identity:
 security find-identity -v -p codesigning
 ```
+
+What `codesign` itself needs, found on a CI runner: the keychain holding
+the identity must be on the user's keychain search list (`codesign
+--keychain <file>` with a keychain that isn't on it says "no identity
+found"), and in a headless session the key's partition list must allow
+codesign. Trust is not needed; an untrusted (`CSSMERR_TP_NOT_TRUSTED`)
+identity signs fine. `scripts/signing/ci-keychain.sh` sets this up on CI,
+and the `app` CI job checks that the result's designated requirement is
+`identifier "com.bjornbom.yap" and certificate leaf = H"<cert SHA-1>"`.
 
 Then tell Release builds to use it, either per shell or permanently:
 
