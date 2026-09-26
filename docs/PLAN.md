@@ -35,7 +35,7 @@ Everything runs on the Mac. No API keys, no accounts, no cloud, no telemetry.
 | Polish via Claude API key                     | Polish via Apple Foundation Models, on-device, free                 |
 | Pick a "vibe" manually                        | Style follows the app you're in (Slack, Mail, Xcode, Terminal…)     |
 | Clipboard + osascript ⌘V, clipboard lost      | Accessibility insert, paste fallback, clipboard restored            |
-| Unsigned, `xattr -cr` workaround              | Signed, notarized, Sparkle updates, Homebrew cask                   |
+| Unsigned, `xattr -cr` workaround              | One-line install, stable signing, Sparkle updates, Homebrew cask    |
 | No meeting notes                              | Notes: mic + system audio, speakers, summary, Markdown files        |
 
 ## 3. Tech stack
@@ -53,8 +53,8 @@ Everything runs on the Mac. No API keys, no accounts, no cloud, no telemetry.
 | Hotkey              | Own `CGEventTap` state machine                                         | Needed for modifier-only push-to-talk (Fn, right ⌥) and double-tap lock               |
 | Text insertion      | AX `kAXSelectedTextAttribute` → fallback `CGEvent` ⌘V + clipboard restore | Native fields get text directly; everything else still works; clipboard survives   |
 | Storage             | [GRDB](https://github.com/groue/GRDB.swift) + SQLite FTS5 for history; notes as `.md` files | Fast search; notes are plain files that work with Obsidian, iCloud, git            |
-| Updates             | [Sparkle 2](https://sparkle-project.org)                               | The standard for notarized non-App-Store Mac apps                                      |
-| Project             | Thin Xcode app target + one local Swift package (`YapKit`)             | Logic is testable with `swift test`; fewer pbxproj conflicts for contributors         |
+| Updates             | [Sparkle 2](https://sparkle-project.org)                               | EdDSA-verified updates; works without a paid Apple account                           |
+| Project             | [XcodeGen](https://github.com/yonaskolb/XcodeGen) `project.yml` for a thin app target + one Swift package (`YapKit`) | Logic is testable with `swift test`; no committed `.pbxproj`, no merge conflicts |
 
 ## 4. Architecture
 
@@ -198,32 +198,56 @@ should read like it was made by one sharp person who cares — because it was.
 
 ## 8. Shipping it so it "just works"
 
-- **Signed + notarized** with a Developer ID (Apple Developer Program, $99/yr).
-  No more `xattr` step. This is the single biggest trust upgrade.
-- **Install:** DMG from GitHub Releases, or `brew install --cask bjornbom/tap/yap`.
-- **Updates:** Sparkle 2, EdDSA-signed appcast in the repo.
-- **CI:** GitHub Actions on macOS runners — build, `swift test`, `yap-bench`;
-  on tag: archive, sign, notarize, staple, DMG, appcast, release.
+No paid Apple Developer account. Everything in the app works without one; the
+only thing it buys is notarization, which removes a one-time warning on first
+launch for people who download the DMG in a browser. We design around that and
+keep Developer ID as a drop-in upgrade (CI secrets only, no code changes).
+
+- **Stable self-signed code signing.** CI signs every build with the same
+  self-signed certificate (hardened runtime on). A stable signature means macOS
+  keeps Microphone and Accessibility permissions across updates. Ad-hoc signing
+  changes identity every build and silently revokes them.
+- **Install, primary:** one line, zero warnings — files fetched with `curl` get
+  no quarantine flag, so Gatekeeper never interrupts:
+  `curl -fsSL https://github.com/Bjoernbom/yap/releases/latest/download/install.sh | sh`
+  The script is short and readable: download, verify checksum, move to
+  `/Applications`, open.
+- **Install, Homebrew:** own tap (`brew install --cask bjornbom/tap/yap`) whose
+  cask strips quarantine on install. Secondary path; Homebrew is tightening
+  rules for unnotarized casks.
+- **Install, DMG:** for manual downloads, with a clear one-image guide to
+  System Settings → Privacy & Security → Open Anyway (macOS 15+ removed the
+  right-click → Open shortcut).
+- **Updates:** Sparkle 2 with an EdDSA-signed appcast. Downloads made by the app
+  itself are not quarantined, so updates install silently after the first run.
+- **CI:** GitHub Actions on macOS runners — build, `swift test`, `yap-bench` on
+  every PR; on tag: archive, sign, DMG, zip, checksums, appcast, release.
 - **Diagnostics without telemetry:** local log + "Copy diagnostics" button that
   produces a text blob users can paste into a GitHub issue.
 - **Bundle id:** `com.bjornbom.yap` (0.4 used `com.voicething.app`).
-- **Migrating 0.4 users:** ship a last 0.4.x whose update points at 1.0. Spike
-  whether the Tauri updater can install the new bundle directly; otherwise a
-  one-line "yap 1.0 is out" banner with a download link.
+- **Migrating 0.4 users:** 0.4's Tauri updater reads `latest.json` from the
+  latest GitHub release. Spike whether it can install the new bundle directly;
+  otherwise ship a last 0.4.x that shows a one-line "yap 1.0 is out" banner.
+  Until then, 1.0 pre-releases are marked as GitHub *pre-releases* so 0.4 users
+  are never affected.
 
 ## 9. Milestones
 
 | #  | Milestone          | Done when                                                                                 |
 | -- | ------------------ | ----------------------------------------------------------------------------------------- |
-| M0 | Spikes             | Parakeet v3 sv/en WER + latency measured; Foundation Models polish quality in sv/en checked; Core Audio tap + AEC capture works; Fn capture works; memory measured |
+| M0 | Spikes             | Parakeet v3 sv/en WER + latency + memory measured; Foundation Models polish/summary quality in sv/en checked; Core Audio tap + AEC capture works; Fn capture + AX insertion work. Findings in `docs/spikes/` |
 | M1 | Dictation core     | Hold → talk → release inserts text in any app; notch overlay; history; streaming chunks    |
 | M2 | Dictation magic    | App-aware style, cleanup, dictionary, polish with timeout, clipboard restore, paste last, double-tap lock, device policy |
 | M3 | Notes              | Two-track capture, live transcript, diarization, summary, Markdown files, call detection   |
-| M4 | Ship               | Onboarding, settings + health, signing, notarization, Sparkle, cask, CI, `yap-bench`       |
+| M4 | Ship               | Onboarding, settings + health, self-signed signing, install script, Sparkle, cask, release CI, `yap-bench` |
 | M5 | Brand              | Pixel waveform, icon, sounds, README, landing page, demo GIF                               |
 
-The old Tauri code stays in git history under the `v0.4.0` tag; the `v1` branch
-replaces it wholesale.
+**Repo:** same repo (`Bjoernbom/yap`), so the URL, stars, issues and the 0.4
+update channel stay. `main` is wiped and restarted as 1.0; the Tauri code lives
+on under the `v0.4.0` tag.
+
+**Workflow:** one PR per logical unit, squash-merged into `main` once it builds
+and its tests pass. Independent work runs in parallel git worktrees.
 
 ## 10. Not in 1.0
 
@@ -231,13 +255,15 @@ Windows/Linux, Intel Macs, any cloud model, accounts, meeting bots, calendar
 integration, file import, "command mode" (rewrite selected text by voice), iOS.
 Good ideas for later — not now.
 
-## 11. Open questions
+## 11. Decisions
 
-1. Native Swift, macOS 26+, Apple Silicon only — OK to drop everything else?
-2. Apple Developer Program ($99/yr) for signing and notarization — go?
-3. Accent colour and tagline — lime + "talk. it types." or explore alternatives in M5?
-4. Optional Whisper download for Norwegian/Japanese/Chinese/Korean — keep, or
-   ship 1.0 with Parakeet's 25 languages only?
+1. Native Swift, macOS 26+, Apple Silicon only — **yes**.
+2. Paid Apple Developer Program — **no**; see section 8. Revisit if first-launch
+   friction turns out to hurt adoption.
+3. Accent colour and tagline — lime + "talk. it types." as working default;
+   final call in M5.
+4. Whisper for Norwegian/Japanese/Chinese/Korean — optional download, built
+   after M3 so it never slows down the core.
 
 ## 12. Assumptions to verify in M0
 
