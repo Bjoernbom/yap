@@ -137,6 +137,7 @@ func runStream(_ options: Options) async throws {
 	}
 	if let softChunk = options.softChunk { policy.softChunk = softChunk }
 	if let overlap = options.overlap { policy.overlap = overlap }
+	if let keepWarm = options.keepWarm { policy.keepWarmInterval = keepWarm > 0 ? keepWarm : nil }
 	let transcriber = StreamingTranscriber(engine: engine, vad: vad, policy: policy) { report in
 		let readyAt = feedStart.withLock { $0.map { clock.now - $0 } } ?? .zero
 		chunks.withLock {

@@ -7,6 +7,7 @@ private actor ChunkEngine: SpeechEngine {
 	private(set) var receivedSampleCounts: [Int] = []
 	private(set) var started = 0
 	private(set) var maxConcurrent = 0
+	private(set) var warmUps = 0
 	private var running = 0
 	private var gated: Bool
 	private var waiters: [CheckedContinuation<Void, Never>] = []
@@ -18,7 +19,7 @@ private actor ChunkEngine: SpeechEngine {
 	}
 
 	func prepare(progress: @escaping @Sendable (ModelProgress) -> Void) async throws {}
-	func warmUp() async {}
+	func warmUp() async { warmUps += 1 }
 	func unload() async {}
 
 	func transcribe(_ samples: [Float]) async throws -> Transcript {
@@ -214,6 +215,24 @@ struct StreamingTranscriberTests {
 		let text = try await transcriber.finish()
 		#expect(text == (1...words).map { "w\($0)" }.joined(separator: " "))
 		#expect(await engine.calls > 3)
+	}
+
+	@Test func keepsTheEngineWarmWhileNothingIsCut() async throws {
+		let engine = ChunkEngine()
+		let transcriber = StreamingTranscriber(engine: engine, vad: ScriptedVAD(script: [Float](repeating: s, count: 12)))
+		await transcriber.begin()
+		await feed(transcriber, hops: 12)
+		_ = try await transcriber.finish()
+		#expect(await engine.warmUps >= 1)
+
+		var policy = ChunkPolicy.dictation
+		policy.keepWarmInterval = nil
+		let idle = ChunkEngine()
+		let cold = StreamingTranscriber(engine: idle, vad: ScriptedVAD(script: [Float](repeating: s, count: 12)), policy: policy)
+		await cold.begin()
+		await feed(cold, hops: 12)
+		_ = try await cold.finish()
+		#expect(await idle.warmUps == 0)
 	}
 }
 

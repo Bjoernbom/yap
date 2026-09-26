@@ -20,6 +20,8 @@ struct Options {
 	var maxChunk: Double?
 	var softChunk: Double?
 	var overlap: Double?
+	/// 0 turns keep-warm off.
+	var keepWarm: Double?
 	/// Seconds to wait between warm-up and the measured call.
 	var idle: Double?
 
@@ -55,6 +57,9 @@ struct Options {
 			case "--overlap":
 				guard let seconds = Double(try value()), seconds >= 0 else { throw BenchError.usage("bad --overlap") }
 				overlap = seconds
+			case "--keep-warm":
+				guard let seconds = Double(try value()), seconds >= 0 else { throw BenchError.usage("bad --keep-warm") }
+				keepWarm = seconds
 			case "--idle":
 				guard let seconds = Double(try value()), seconds >= 0 else { throw BenchError.usage("bad --idle") }
 				idle = seconds

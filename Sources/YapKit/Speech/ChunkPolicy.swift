@@ -36,6 +36,10 @@ public struct ChunkPolicy: Sendable, Equatable {
 	/// so each word is taken from the chunk that heard it with at least this
 	/// much context around it, by word timings.
 	public var overlap: Double
+	/// While the key is held and the engine has had nothing to do for this
+	/// long, wake it with a warm-up call. The Neural Engine clocks down after
+	/// about a second of idle, which costs key-up 25–50 ms. nil turns it off.
+	public var keepWarmInterval: Double?
 
 	public init(
 		hopSamples: Int = 4096,
@@ -48,7 +52,8 @@ public struct ChunkPolicy: Sendable, Equatable {
 		paddedMinimum: Double = 1,
 		softChunk: Double = 4,
 		dipThreshold: Float = 0.5,
-		overlap: Double = 1
+		overlap: Double = 1,
+		keepWarmInterval: Double? = 0.75
 	) {
 		self.hopSamples = hopSamples
 		self.speechThreshold = speechThreshold
@@ -61,6 +66,7 @@ public struct ChunkPolicy: Sendable, Equatable {
 		self.softChunk = softChunk
 		self.dipThreshold = dipThreshold
 		self.overlap = overlap
+		self.keepWarmInterval = keepWarmInterval
 	}
 
 	/// Push-to-talk dictation: cut at every pause of 0.5 s, at a short dip
