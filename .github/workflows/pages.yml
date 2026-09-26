@@ -1,0 +1,47 @@
+name: pages
+
+# Publishes site/ to GitHub Pages. Does nothing until Pages is switched on
+# (Settings → Pages → Source: GitHub Actions), so main stays green before that.
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check that Pages is on
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" --jq .build_type > build_type 2>/dev/null \
+            && [ "$(cat build_type)" = workflow ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::GitHub Pages isn't set to GitHub Actions yet; skipping the deploy."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.pages.outputs.enabled == 'true'
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outputs.enabled == 'true'
+        with:
+          path: site
+      - id: deployment
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/deploy-pages@v4
