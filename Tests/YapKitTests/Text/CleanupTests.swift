@@ -46,6 +46,7 @@ struct CleanupTests {
 		("The the report is late.", "The report is late."),
 		("Jag jag tror det.", "Jag tror det."),
 		("Vi kan kan ta det imorgon.", "Vi kan ta det imorgon."),
+		("Vi har grannar som som alltid spelar hög musik..", "Vi har grannar som alltid spelar hög musik."),
 		("of the, the report", "of the report"),
 		("Um, the, uh, the report.", "The report."),
 	])

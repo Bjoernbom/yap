@@ -29,7 +29,7 @@ public enum Cleanup {
 		"had", "that", "is", "do", "bye", "very", "really", "no", "yes", "so",
 		"ha", "now", "well", "okay", "ok", "please", "go", "in", "on", "to",
 		// Swedish
-		"det", "den", "på", "i", "till", "om", "med", "av", "som", "för", "att",
+		"det", "den", "på", "i", "till", "om", "med", "av", "för",
 		"ja", "nej", "hej", "tack", "bra", "mycket", "jätte", "okej", "kom", "nu",
 		// Numbers
 		"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
