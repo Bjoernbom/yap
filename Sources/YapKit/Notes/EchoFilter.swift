@@ -3,24 +3,25 @@
 /// On speakers (no headphones) the mic hears the call too, so "you" repeats
 /// what "them" said at the same moment. Echo cancellation would fix it at
 /// the source, but voice processing ducks all other audio (see the M0
-/// spike), so this works on text and word timings instead:
+/// spike), so this works on the transcripts instead.
 ///
-/// - Only words spoken while "them" was talking can be echo; the user's own
-///   words before or after (a question the answer's echo follows within one
-///   pause) always stay.
-/// - Of those, when almost all appear in order in the "them" speech, they
-///   all go (the ones that don't match are the echo transcribed a little
-///   differently). Otherwise only runs of `minimumRun` or more matching
-///   words in a row go.
-/// - Without word timings the same rules run on whole segments with a time
-///   window instead.
+/// With word timings (the normal case): a "you" word is echo when "them"
+/// said the same word within `wordSlack` of it. Up to `maxMisheard` words
+/// between echo words count as echo too (the echo transcribed a little
+/// differently), and only runs of at least `minimumWords` go. So the user's
+/// own words right before or after the echo, even in the same chunk (the VAD
+/// needs ~0.8 s of silence to cut), stay.
+///
+/// Without timings the same idea runs on whole segments: a "you" segment is
+/// dropped when almost all its words appear in order in "them" around the
+/// same time, and runs of `minimumRun` matching words are cut.
 ///
 /// Deliberately conservative, because dropping real words is worse than
 /// keeping an echo:
-/// - Fewer than `minimumWords` candidate words are kept even if they match:
-///   a short "yes" or "okay" is as likely yours as an echo.
-/// - Repeating four or more words someone says while they are still saying
-///   them gets cut too; that is the price.
+/// - Short matches stay: a "yes" or "okay" as the other side says it is as
+///   likely the user's as an echo.
+/// - Saying three or more of the same words at the same moment as the other
+///   side gets them cut too; that is the price.
 /// - Words must match exactly after lowercasing and dropping punctuation; an
 ///   echo transcribed very differently from the original is kept.
 /// - Echo the mic hears but the tap doesn't (another device in the room) is
@@ -32,9 +33,11 @@ enum EchoFilter {
 	static let threshold = 0.7
 	static let minimumWords = 3
 	static let minimumRun = 4
-	/// Slack for "while them was talking": word timings are off by a few
-	/// hundred milliseconds, and the echo arrives a few tens late.
-	static let overlapSlack = 0.3
+	/// How far apart an echo word and the original may be: word timings are
+	/// off by a few hundred milliseconds, and the echo arrives tens late.
+	static let wordSlack = 0.6
+	/// Misheard words tolerated inside a run of echo.
+	static let maxMisheard = 2
 	/// Longer than any chunk (10 s ceiling plus overlap), for the search.
 	static let maxSegmentLength = 20.0
 
@@ -48,24 +51,46 @@ enum EchoFilter {
 
 	/// The segment with echo removed, or nil when it was all echo.
 	static func withoutEcho(_ segment: NoteSegment, of them: [NoteSegment]) -> NoteSegment? {
-		guard !segment.words.isEmpty else { return withoutEchoByText(segment, of: them) }
-		let words = segment.words
-		let window = (segment.start - tolerance)...(segment.end + tolerance)
-		let talking = themSegments(of: them, in: window)
+		let talking = themSegments(of: them, in: (segment.start - tolerance)...(segment.end + tolerance))
 		guard !talking.isEmpty else { return segment }
-		// Words heard while "them" spoke, with their place in `words`.
-		let candidates = words.indices.filter { index in
-			let middle = (words[index].start + words[index].end) / 2
-			return !normalized(words[index].text).isEmpty
-				&& talking.contains { middle >= $0.start - overlapSlack && middle <= $0.end + overlapSlack }
+		let themWords = talking.flatMap(\.words)
+		guard !segment.words.isEmpty, !themWords.isEmpty else { return withoutEchoByText(segment, of: them) }
+		let words = segment.words
+
+		// Where each "them" word was said, by its normalized text.
+		var heard: [String: [Double]] = [:]
+		for word in themWords {
+			heard[normalized(word.text), default: []].append(middle(of: word))
 		}
-		guard candidates.count >= minimumWords else { return segment }
-		let matched = matches(candidates.map { normalized(words[$0].text) }, talking.flatMap { normalizedWords($0.text) })
-		let drop: Set<Int>
-		if Double(matched.count) / Double(candidates.count) >= threshold {
-			drop = Set(candidates)
-		} else {
-			drop = Set(runs(of: matched, count: candidates.count).flatMap { $0 }.map { candidates[$0] })
+		// An echo word is the same word as "them" said at the same moment.
+		var echo = words.map { word in
+			heard[normalized(word.text)]?.contains { abs($0 - middle(of: word)) <= wordSlack } ?? false
+		}
+		// A few misheard words between echo words are echo too.
+		var index = 0
+		while index < words.count {
+			guard !echo[index], index > 0, echo[index - 1] else {
+				index += 1
+				continue
+			}
+			var next = index
+			while next < words.count, !echo[next] { next += 1 }
+			if next < words.count, next - index <= maxMisheard {
+				for gap in index..<next { echo[gap] = true }
+			}
+			index = next
+		}
+		// Only runs long enough to be sure: a lone "yes" as "them" says "yes"
+		// may well be the user.
+		var drop = Set<Int>()
+		var run: [Int] = []
+		for position in 0...words.count {
+			if position < words.count, echo[position] {
+				run.append(position)
+			} else {
+				if run.count >= minimumWords { drop.formUnion(run) }
+				run = []
+			}
 		}
 		guard !drop.isEmpty else { return segment }
 		let kept = words.indices.filter { !drop.contains($0) }.map { words[$0] }
@@ -78,6 +103,10 @@ enum EchoFilter {
 		trimmed.start = first.start
 		trimmed.end = last.end
 		return trimmed
+	}
+
+	private static func middle(of word: TimedWord) -> Double {
+		(word.start + word.end) / 2
 	}
 
 	/// The same rules on text alone, for segments without word timings: the

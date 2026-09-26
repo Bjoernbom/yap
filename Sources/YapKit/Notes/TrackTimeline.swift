@@ -62,6 +62,11 @@ struct TrackTimeline: Sendable {
 		return samples
 	}
 
+	/// Words from stream time to meeting time.
+	func meetingWords(_ words: [TimedWord]) -> [TimedWord] {
+		words.map { TimedWord(text: $0.text, start: meetingTime(stream: $0.start), end: meetingTime(stream: $0.end)) }
+	}
+
 	/// The meeting time of a point in the stream.
 	func meetingTime(stream seconds: Double) -> Double {
 		guard let first = anchors.first else { return seconds }

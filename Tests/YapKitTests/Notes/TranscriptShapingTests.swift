@@ -112,31 +112,42 @@ struct EchoFilterTests {
 		#expect(kept.map(\.text) == ["I will fix the Swedish characters in the export before Tuesday.", "What about the CSV export bug?"])
 	}
 
-	@Test func withTimingsTheUsersOwnWordsBeforeTheEchoStay() {
-		// "bug?" was said before the answer started; the rest is the answer
-		// leaking in, one word misheard.
-		let you = NoteSegment(speaker: .you, start: 32.4, end: 36, text: "", words: [
-			TimedWord(text: "bug?", start: 32.4, end: 32.8),
-			TimedWord(text: "I", start: 33.1, end: 33.2), TimedWord(text: "will", start: 33.2, end: 33.4),
-			TimedWord(text: "fix", start: 33.4, end: 33.7), TimedWord(text: "those", start: 33.7, end: 33.9),
-			TimedWord(text: "Swedish", start: 33.9, end: 34.4), TimedWord(text: "characters.", start: 34.4, end: 35),
-		])
-		let them = segment(.them(nil), 33, 36, "I will fix the Swedish characters.")
-		let kept = EchoFilter.removeEcho(from: [them, you])
-		#expect(kept.map(\.text) == ["I will fix the Swedish characters.", "bug?"])
-		#expect(kept.last?.start == 32.4 && kept.last?.end == 32.8)
+	/// Words at 0.3 s each from `start`, for timed segments.
+	private func timed(_ text: String, from start: Double) -> [TimedWord] {
+		text.split(separator: " ").enumerated().map { index, word in
+			TimedWord(text: String(word), start: start + Double(index) * 0.3, end: start + Double(index + 1) * 0.3)
+		}
 	}
 
-	@Test func withTimingsWordsAfterTheOtherSideStoppedStay() {
-		let you = NoteSegment(speaker: .you, start: 10, end: 16, text: "", words: [
-			TimedWord(text: "ship", start: 10, end: 10.3), TimedWord(text: "on", start: 10.3, end: 10.5),
-			TimedWord(text: "Friday", start: 10.5, end: 11), TimedWord(text: "then.", start: 11, end: 11.4),
-			TimedWord(text: "Sounds", start: 14, end: 14.4), TimedWord(text: "good", start: 14.4, end: 14.8),
-			TimedWord(text: "to", start: 14.8, end: 15), TimedWord(text: "me.", start: 15, end: 15.4),
-		])
-		let them = segment(.them(nil), 10, 11.5, "Ship on Friday then.")
+	private func timedSegment(_ speaker: Speaker, _ text: String, from start: Double) -> NoteSegment {
+		let words = timed(text, from: start)
+		return NoteSegment(speaker: speaker, start: start, end: words.last?.end ?? start, text: text, words: words)
+	}
+
+	@Test func withTimingsTheUsersOwnWordsAroundTheEchoStay() {
+		// One chunk: the end of the user's question, the answer leaking in
+		// (one word misheard), and the user again. The VAD didn't cut in the
+		// short pauses.
+		let them = timedSegment(.them(nil), "I will fix the Swedish characters.", from: 33)
+		var words = timed("export bug?", from: 32.2)
+		words += timed("I will fix those Swedish characters.", from: 33.05)
+		words += timed("Great, thanks.", from: 35.5)
+		let you = NoteSegment(speaker: .you, start: 32.2, end: 36.1, text: words.map(\.text).joined(separator: " "), words: words)
 		let kept = EchoFilter.removeEcho(from: [them, you])
-		#expect(kept.last?.text == "Sounds good to me.")
+		#expect(kept.map(\.text) == ["I will fix the Swedish characters.", "export bug? Great, thanks."])
+	}
+
+	@Test func withTimingsTheSameWordsAtAnotherMomentStay() {
+		let them = timedSegment(.them(nil), "Ship on Friday then.", from: 10)
+		// The user repeats it after a pause: agreement, not echo.
+		let you = timedSegment(.you, "Ship on Friday then.", from: 11.8)
+		#expect(EchoFilter.removeEcho(from: [them, you]).count == 2)
+	}
+
+	@Test func withTimingsAnEchoOnlySegmentGoes() {
+		let them = timedSegment(.them(nil), "Can everyone see my screen now?", from: 4)
+		let you = timedSegment(.you, "Can everyone see my screen now?", from: 4.08)
+		#expect(EchoFilter.removeEcho(from: [them, you]).map(\.speaker) == [.them(nil)])
 	}
 
 	@Test func matchesFindTheCommonSubsequence() {

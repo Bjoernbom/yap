@@ -336,13 +336,12 @@ public actor NotesSession {
 		let end = max(timeline.meetingTime(stream: streamEnd), start)
 		switch id {
 		case .you:
-			let words = report.words.map {
-				TimedWord(text: $0.text, start: timeline.meetingTime(stream: $0.start), end: timeline.meetingTime(stream: $0.end))
-			}
-			youSegments.append(NoteSegment(speaker: .you, start: start, end: end, text: text, words: words))
+			youSegments.append(NoteSegment(
+				speaker: .you, start: start, end: end, text: text, words: timeline.meetingWords(report.words)))
 		case .them:
 			themPieces.append(ThemPiece(
-				segment: NoteSegment(speaker: .them(nil), start: start, end: end, text: text),
+				segment: NoteSegment(
+					speaker: .them(nil), start: start, end: end, text: text, words: timeline.meetingWords(report.words)),
 				words: report.words, streamRange: streamStart...streamEnd))
 		}
 		let live = liveSegments()
@@ -409,7 +408,8 @@ public actor NotesSession {
 				segments.append(NoteSegment(
 					speaker: .them(run.speaker), start: start,
 					end: max(timeline.meetingTime(stream: last.end), start),
-					text: TranscriptJoiner.join(run.words.map(\.text))))
+					text: TranscriptJoiner.join(run.words.map(\.text)),
+					words: timeline.meetingWords(run.words)))
 			}
 		}
 		Self.log.notice("Diarization: \(assignment.numbers.count, privacy: .public) speakers")
