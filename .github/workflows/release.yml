@@ -1,8 +1,10 @@
 name: release
 
-# Push a tag like v1.0.0-beta.1 on main. The result is always a GitHub
-# *pre-release*: yap 0.4's updater reads releases/latest/download/latest.json,
-# so no 1.x release may become "latest" until 0.4 users are migrated.
+# Push a tag like v1.0.0 on main. A plain version becomes the GitHub "latest"
+# release, so releases/latest/download/yap.dmg is always the newest yap; a tag
+# with a suffix (v1.1.0-beta.1) stays a pre-release. yap 0.4 reads
+# releases/latest/download/latest.json, which 1.x doesn't ship, so 0.4 simply
+# stops seeing updates; its users install 1.x by hand.
 on:
   push:
     tags: ["v1.*"]
@@ -68,12 +70,18 @@ jobs:
             scripts/release/package.sh --dry-run "$TAG"
           fi
 
-      - name: GitHub pre-release
+      - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           MODE: ${{ steps.signing.outputs.mode }}
         run: |
           version=${TAG#v}
+          case $version in
+            *-*) kind="--prerelease --latest=false" ;;
+            *) kind="--latest" ;;
+          esac
+          # A fixed name too, for the permanent link in the README and on the site.
+          cp "dist/yap-$version.dmg" dist/yap.dmg
           notes="$RUNNER_TEMP/notes.md"
           {
             echo "Install or update:"
@@ -82,19 +90,21 @@ jobs:
             echo "curl -fsSL https://github.com/Bjoernbom/yap/releases/download/$TAG/install.sh | sh"
             echo '```'
             echo
-            echo "Or \`brew install --cask bjoernbom/tap/yap\`, or the DMG below (first launch: System Settings → Privacy & Security → Open Anyway)."
+            echo "Or the DMG below (first launch: System Settings → Privacy & Security → Open Anyway)."
             if [ "$MODE" != release ]; then
               echo
               echo "**Test build:** not signed with the release certificate or Sparkle key."
             fi
           } > "$notes"
-          set -- "dist/yap-$version.zip" "dist/yap-$version.dmg" dist/SHA256SUMS dist/install.sh
+          set -- "dist/yap-$version.zip" "dist/yap-$version.dmg" dist/yap.dmg dist/SHA256SUMS dist/install.sh
           if gh release view "$TAG" > /dev/null 2>&1; then
-            # A re-run: replace the assets, keep it a pre-release.
+            # A re-run: replace the assets, keep its kind.
             gh release upload "$TAG" "$@" --clobber
-            gh release edit "$TAG" --prerelease --latest=false
+            # shellcheck disable=SC2086 # two flags in one variable
+            gh release edit "$TAG" $kind
           else
-            gh release create "$TAG" "$@" --verify-tag --prerelease --latest=false \
+            # shellcheck disable=SC2086
+            gh release create "$TAG" "$@" --verify-tag $kind \
               --title "yap $version" --notes-file "$notes" --generate-notes
           fi
 
