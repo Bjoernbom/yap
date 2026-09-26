@@ -28,7 +28,7 @@ let package = Package(
 				.product(name: "FluidAudio", package: "FluidAudio"),
 			]
 		),
-		.testTarget(name: "YapKitTests", dependencies: ["YapKit"]),
+		.testTarget(name: "YapKitTests", dependencies: ["YapKit"], exclude: ["Notes/Fixtures"]),
 		// Dev harness: exercises the real MicCapture on this Mac (latency, levels, probes).
 		.executableTarget(name: "yap-harness-mic", dependencies: ["YapKit"]),
 		// Dev harness: drives DictationSession through the public API with
