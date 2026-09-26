@@ -8,6 +8,8 @@ import SwiftUI
 /// label, the one view that is always alive.
 struct DebugWindowOpener: ViewModifier {
 	static let tryItNotification = Notification.Name("com.bjornbom.yap.debug.tryIt")
+	/// `com.bjornbom.yap.debug.tryIt.<pid>`: the same, for one yap process.
+	static let tryItThisProcess = Notification.Name("\(tryItNotification.rawValue).\(getpid())")
 
 	@Environment(\.openWindow) private var openWindow
 	@Environment(\.openSettings) private var openSettings
@@ -22,6 +24,12 @@ struct DebugWindowOpener: ViewModifier {
 				openSettings()
 			}
 			.onReceive(DistributedNotificationCenter.default().publisher(for: Self.tryItNotification)) { _ in
+				NSApp.activate()
+				openWindow(id: WindowID.tryIt)
+			}
+			// Every running yap hears the plain name, including the user's own
+			// while a test build runs next to it; this one only reaches us.
+			.onReceive(DistributedNotificationCenter.default().publisher(for: Self.tryItThisProcess)) { _ in
 				NSApp.activate()
 				openWindow(id: WindowID.tryIt)
 			}
