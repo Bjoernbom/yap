@@ -22,6 +22,8 @@ let usage = """
 	      --all-styles            one run per style
 	      --polish                turn polish on (needs Apple Intelligence)
 	      --dictionary <json>     dictionary entries: [{"id","spoken","written"}]
+	  diarize <audio>             run the notes diarizer on a file, as after a meeting
+	      --loops <n>             repeat the file n times, to time long meetings (default 1)
 
 	  --model ultra|v3            default ultra
 	  --json                      machine-readable output on stdout
@@ -35,6 +37,7 @@ do {
 	case "stream": try await runStream(options)
 	case "memory": try await runMemory(options)
 	case "text": try await runText(options)
+	case "diarize": try await runDiarize(options)
 	default: throw BenchError.usage(nil)
 	}
 } catch BenchError.usage(let message) {
