@@ -26,6 +26,9 @@ final class NotesController {
 		static let micBusy = "Finish dictating first."
 		/// The note window has the full line with the path.
 		static let savedElsewhere = "Couldn't use your notes folder. Saved elsewhere."
+		/// A note line: the tap delivered only zeros, which is what missing
+		/// permission looks like.
+		static let systemAudioBlocked = "The other side of the call wasn't recorded. Allow yap under System Settings → Privacy & Security → Screen & System Audio Recording."
 	}
 
 	/// Which window the menu bar label should open next (it owns
@@ -44,6 +47,9 @@ final class NotesController {
 	private(set) var liveSegments: [NoteSegment] = []
 	/// Recording without the system-audio track.
 	private(set) var isMicOnly = false
+	/// The tap runs but hears only zeros while something plays: System
+	/// Audio Recording isn't allowed.
+	private(set) var isSystemAudioBlocked = false
 	/// The last finished note, for the note window.
 	private(set) var lastNote: FinishedNote?
 	private(set) var windowRequest: WindowRequest?
@@ -51,6 +57,13 @@ final class NotesController {
 	@ObservationIgnored private let overlay: OverlayController
 	@ObservationIgnored private let dictation: DictationController
 	@ObservationIgnored private var session: NotesSession?
+	/// The "them" track while recording, to ask it about permission at stop.
+	@ObservationIgnored private var tap: SystemAudioTap?
+	@ObservationIgnored private var callDetector: CallDetector?
+	@ObservationIgnored private var callWatch: Task<Void, Never>?
+	/// Call apps seen while recording, for the note's front matter.
+	@ObservationIgnored private var callApps: [String] = []
+	@ObservationIgnored private var blockedWatch: Task<Void, Never>?
 	@ObservationIgnored private var transcriptTask: Task<Void, Never>?
 	@ObservationIgnored private var hotKey: GlobalHotKey?
 	@ObservationIgnored private var restoreTask: Task<Void, Never>?
@@ -139,6 +152,9 @@ final class NotesController {
 		}
 		self.session = session
 		isMicOnly = await !session.hasSystemAudio
+		isSystemAudioBlocked = false
+		await watchCalls()
+		watchForBlockedSystemAudio()
 		let transcript = session.transcript
 		transcriptTask = Task { [weak self] in
 			for await segments in transcript {
@@ -156,15 +172,21 @@ final class NotesController {
 	private func makeSession() async throws -> NotesSession {
 		let vad = try await SileroVAD.load()
 		var you: any AudioSource = dictation.mic
-		// System audio arrives with `SystemAudioTap`; until then notes are
-		// mic-only and the note and menu say so.
-		var them: (any AudioSource)?
+		// Everything the Mac plays except yap. The first start asks for
+		// System Audio Recording; if the tap can't start, notes are mic-only
+		// and the note and menu say so.
+		let tap = SystemAudioTap()
+		self.tap = tap
+		var them: (any AudioSource)? = tap
 		#if DEBUG
 		// File-fed tracks for verification (`-YapNotesMicFile`,
 		// `-YapNotesThemFile`): long meetings in minutes, and two tracks
 		// without a call.
 		if let file = DebugAudioFile.source(forKey: "YapNotesMicFile") { you = file }
-		if let file = DebugAudioFile.source(forKey: "YapNotesThemFile") { them = file }
+		if let file = DebugAudioFile.source(forKey: "YapNotesThemFile") {
+			them = file
+			self.tap = nil
+		}
 		#endif
 		return NotesSession(
 			you: you,
@@ -187,17 +209,29 @@ final class NotesController {
 		overlay.show(.working)
 		let clock = ContinuousClock()
 		let started = clock.now
-		let note: Note
+		blockedWatch?.cancel()
+		if let tap {
+			// Asked before stop: the counters are for the current capture.
+			let stats = await tap.statistics
+			Logger.notes.notice("System audio: \(stats.callbacks, privacy: .public) callbacks, \(stats.audibleCallbacks, privacy: .public) audible, peak \(stats.peak, privacy: .public)")
+			if await tap.looksBlocked { isSystemAudioBlocked = true }
+		}
+		let blocked = isSystemAudioBlocked
+		var note: Note
 		do {
 			note = try await session.stop()
 		} catch {
-			// Only a second stop throws; the first one owns the result.
+			// Only a stop without a recording throws; nothing to write.
+			phase = .idle
 			return
 		}
 		transcriptTask?.cancel()
 		self.session = nil
+		tap = nil
 		dictation.isPausedForNotes = false
 		defer { phase = .idle }
+		note.apps = await stopWatchingCalls()
+		if blocked { note.notices.append(Message.systemAudioBlocked) }
 
 		guard !note.isEmpty else {
 			overlay.show(.message(Message.nothingToWrite))
@@ -223,6 +257,61 @@ final class NotesController {
 			pasteboard.setString(writer.render(note), forType: .string)
 			overlay.show(.message(Message.couldNotSave))
 		}
+	}
+
+	// MARK: - System audio permission
+
+	/// Missing permission looks like silence, and `looksBlocked` can only
+	/// tell while something plays, so ask now and then instead of at stop.
+	private func watchForBlockedSystemAudio() {
+		blockedWatch?.cancel()
+		guard let tap else { return }
+		blockedWatch = Task { [weak self] in
+			while !Task.isCancelled {
+				try? await Task.sleep(for: .seconds(3))
+				guard !Task.isCancelled else { return }
+				if await tap.looksBlocked {
+					Logger.notes.notice("System audio looks blocked")
+					self?.isSystemAudioBlocked = true
+					return
+				}
+			}
+		}
+	}
+
+	// MARK: - Calls
+
+	/// Collects the call apps in use while notes run. Apps already in a
+	/// call at start count too: the detector reports them after its
+	/// minimum duration.
+	private func watchCalls() async {
+		callApps = []
+		let detector = CallDetector()
+		callDetector = detector
+		let events = await detector.events()
+		callWatch = Task { [weak self] in
+			for await event in events {
+				guard case .started(let app) = event, app.mightBeCall else { continue }
+				self?.noteCallApp(app.name)
+			}
+		}
+	}
+
+	private func noteCallApp(_ name: String) {
+		if !callApps.contains(name) { callApps.append(name) }
+	}
+
+	private func stopWatchingCalls() async -> [String] {
+		callWatch?.cancel()
+		callWatch = nil
+		if let callDetector {
+			for recorder in await callDetector.recorders where recorder.app.mightBeCall {
+				noteCallApp(recorder.app.name)
+			}
+			await callDetector.stop()
+		}
+		callDetector = nil
+		return callApps
 	}
 
 	// MARK: - Helpers

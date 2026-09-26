@@ -45,6 +45,9 @@ struct LiveTranscriptView: View {
 			if notes.isMicOnly {
 				Text("Mic only: the other side of the call isn't recorded.")
 					.foregroundStyle(.secondary)
+			} else if notes.isSystemAudioBlocked {
+				Text("Call audio is silent. Allow yap under Screen & System Audio Recording.")
+					.foregroundStyle(.secondary)
 			}
 			Spacer()
 			if notes.isRecording {
