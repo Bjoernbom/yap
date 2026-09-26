@@ -21,5 +21,7 @@ let package = Package(
 			]
 		),
 		.testTarget(name: "YapKitTests", dependencies: ["YapKit"]),
+		// Dev harness: exercises the real MicCapture on this Mac (latency, levels, probes).
+		.executableTarget(name: "yap-harness-mic", dependencies: ["YapKit"]),
 	]
 )
