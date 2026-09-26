@@ -185,7 +185,7 @@ private struct StepHeader: View {
 	}
 }
 
-/// A lime pixel tick on a black chip: the notch's "done", on the window.
+/// A bone pixel tick on a black chip: the notch's "done", on the window.
 struct DoneChip: View {
 	var size: CGFloat = 26
 	@State private var since = Date.now
@@ -199,7 +199,7 @@ struct DoneChip: View {
 			}
 			.overlay {
 				// The tick is 37 pt wide at notch scale; make it ~60 % of the chip.
-				PixelTick(since: since, color: Palette.lime)
+				PixelTick(since: since, color: Palette.bone)
 					.scaleEffect(size * 0.6 / 37)
 			}
 			.frame(width: size, height: size)
@@ -464,7 +464,7 @@ private struct TryItStep: View {
 				.background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 				.overlay {
 					RoundedRectangle(cornerRadius: 12, style: .continuous)
-						.strokeBorder(model.triedIt ? Palette.lime : Color.primary.opacity(boxFocused ? 0.25 : 0.1), lineWidth: model.triedIt ? 2 : 1)
+						.strokeBorder(model.triedIt ? Palette.boneOnWindow : Color.primary.opacity(boxFocused ? 0.25 : 0.1), lineWidth: model.triedIt ? 2 : 1)
 				}
 				.overlay(alignment: .topLeading) {
 					if text.isEmpty {

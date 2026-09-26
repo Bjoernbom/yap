@@ -81,8 +81,8 @@ struct PixelWaveform: View {
 			let folded = Int((Double(extent) * (1 - fold)).rounded())
 			// A silent bar is a dim dot, so the line reads as "listening, quiet".
 			let color = extent == 0 && fold == 0
-				? Palette.lime.opacity(0.45)
-				: Palette.lime.mix(with: Palette.ink.opacity(0.22), by: fold)
+				? Palette.bone.opacity(0.45)
+				: Palette.bone.mix(with: Palette.ink.opacity(0.22), by: fold)
 			for row in (center - folded)...(center + folded) {
 				fill(context, bar: bar, row: row, color: color)
 			}

@@ -47,12 +47,12 @@ struct Keycap: View {
 				.fill(face)
 				.overlay {
 					RoundedRectangle(cornerRadius: 12, style: .continuous)
-						.strokeBorder(isDown ? Palette.lime : Color.primary.opacity(0.12), lineWidth: isDown ? 2 : 1)
+						.strokeBorder(isDown ? Palette.boneOnWindow : Color.primary.opacity(0.12), lineWidth: isDown ? 2 : 1)
 				}
 				.overlay(alignment: .topTrailing) { legendTop }
 				.overlay(alignment: .bottomLeading) { legendBottom }
 				.offset(y: isDown ? 3 : 0)
-				.shadow(color: isDown ? Palette.lime.opacity(0.55) : .clear, radius: 10)
+				.shadow(color: isDown ? Palette.boneOnWindow.opacity(0.55) : .clear, radius: 10)
 		}
 		.frame(width: 76, height: 72)
 		.accessibilityElement()

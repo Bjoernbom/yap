@@ -3,7 +3,7 @@ import SwiftUI
 /// "Done": a pixel tick that draws itself on, one pixel at a time.
 struct PixelTick: View {
 	let since: Date
-	/// White in the notch; onboarding draws it in lime on the window.
+	/// White in the notch; onboarding draws it in bone on the window.
 	var color: Color = Palette.ink
 
 	/// A two-pixel stroke in drawing order: down the short arm, up the long one.
