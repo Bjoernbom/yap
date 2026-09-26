@@ -13,8 +13,11 @@ import OSLog
 /// - `com.bjornbom.yap.debug.notes.capture`: writes the notes windows to
 ///   `-YapCaptureDir` as `notes-<title>.png` (its own name, so other yap
 ///   instances listening for `captureWindows` stay out of it).
-/// - `com.bjornbom.yap.debug.notes.where`: logs where the notch's timer is
-///   on screen, in CoreGraphics coordinates, so a script can click it.
+/// - `com.bjornbom.yap.debug.notes.where`: logs where the notch's timer and
+///   a call prompt are on screen, in CoreGraphics coordinates, so a script
+///   can click them.
+///
+/// Append `.<pid>` to reach one yap process only.
 @MainActor
 final class NotesDebugCommands {
 	private var observers: [NSObjectProtocol] = []
@@ -29,15 +32,19 @@ final class NotesDebugCommands {
 			("capture", { _ in Self.captureWindows() }),
 			("where", { [weak overlay] _ in overlay.map(Self.logTimerLocation) }),
 		]
+		// Each command also as `….<cmd>.<pid>`, which only this process
+		// hears: the user's own Debug yap may be running next to a test build.
 		for (name, command) in commands {
-			observers.append(center.addObserver(
-				forName: Notification.Name("com.bjornbom.yap.debug.notes.\(name)"), object: nil, queue: .main
-			) { [weak notes] _ in
-				MainActor.assumeIsolated {
-					guard let notes else { return }
-					command(notes)
-				}
-			})
+			for suffix in ["", ".\(getpid())"] {
+				observers.append(center.addObserver(
+					forName: Notification.Name("com.bjornbom.yap.debug.notes.\(name)\(suffix)"), object: nil, queue: .main
+				) { [weak notes] _ in
+					MainActor.assumeIsolated {
+						guard let notes else { return }
+						command(notes)
+					}
+				})
+			}
 		}
 	}
 
@@ -49,6 +56,10 @@ final class NotesDebugCommands {
 		let x = geometry.midX + notchWidth / 2 + OverlayLayout.wing / 2
 		let y = screen.frame.maxY - geometry.screenFrame.maxY + (geometry.notch?.height ?? geometry.menuBarHeight) / 2
 		Logger.notes.notice("Timer at x=\(x, privacy: .public) y=\(y, privacy: .public) ignoresMouse=\(panel.ignoresMouseEvents, privacy: .public)")
+		// A call prompt's button: the strip below the notch, centered.
+		let top = screen.frame.maxY - geometry.screenFrame.maxY
+		let promptY = top + OverlayLayout(geometry: geometry).topBand + OverlayLayout.strip / 2
+		Logger.notes.notice("Prompt at x=\(geometry.midX, privacy: .public) y=\(promptY, privacy: .public)")
 	}
 
 	private static func captureWindows() {

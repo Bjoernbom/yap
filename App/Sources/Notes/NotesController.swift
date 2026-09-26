@@ -43,7 +43,16 @@ final class NotesController {
 	/// argument `-notesFolder <dir>`, which verification uses.
 	static let folderKey = "notesFolder"
 
-	private(set) var phase = Phase.idle
+	private(set) var phase = Phase.idle {
+		didSet {
+			if phase != oldValue { onPhaseChange?(phase) }
+		}
+	}
+	/// Called when `phase` changes, for the call prompt.
+	@ObservationIgnored var onPhaseChange: ((Phase) -> Void)?
+	/// What the notch goes back to after a flash while recording, when it
+	/// isn't the plain red dot and timer (a "call ended" prompt).
+	@ObservationIgnored var overlayWhileRecording: (() -> OverlayState?)?
 	private(set) var liveSegments: [NoteSegment] = []
 	/// Recording without the system-audio track.
 	private(set) var isMicOnly = false
@@ -162,7 +171,8 @@ final class NotesController {
 			}
 		}
 		if AppDefaults.store.bool(forKey: Self.consentKey) {
-			overlay.show(.recording(since: since))
+			// A slow start can finish after the call already ended.
+			overlay.show(overlayWhileRecording?() ?? .recording(since: since))
 		} else {
 			AppDefaults.store.set(true, forKey: Self.consentKey)
 			flash(Message.consent)
@@ -323,7 +333,7 @@ final class NotesController {
 		restoreTask = Task { [weak self] in
 			try? await Task.sleep(for: .milliseconds(2400))
 			guard !Task.isCancelled, let self, case .recording(let since) = self.phase else { return }
-			self.overlay.show(.recording(since: since))
+			self.overlay.show(self.overlayWhileRecording?() ?? .recording(since: since))
 		}
 	}
 

@@ -11,6 +11,8 @@ final class OverlayModel {
 	@ObservationIgnored let levels = AudioLevels()
 	/// A click on the red dot and timer while recording a meeting.
 	@ObservationIgnored var onMeetingClick: (() -> Void)?
+	/// A click on a call prompt.
+	@ObservationIgnored var onPromptClick: ((NotchPrompt) -> Void)?
 
 	init(geometry: NotchGeometry) {
 		self.geometry = geometry
@@ -83,6 +85,17 @@ struct OverlayView: View {
 					.contentShape(Rectangle())
 					.onTapGesture { model.onMeetingClick?() }
 					.transition(.opacity)
+			}
+
+		case .prompt:
+			if case .prompt(let prompt) = model.state {
+				belowNotch(layout: layout) {
+					CallPromptLine(prompt: prompt)
+						.accessibilityAction { model.onPromptClick?(prompt) }
+				}
+				.contentShape(Rectangle())
+				.onTapGesture { model.onPromptClick?(prompt) }
+				.transition(.opacity)
 			}
 		}
 	}

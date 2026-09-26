@@ -56,6 +56,14 @@ final class DictationController {
 	/// Called instead of starting a dictation while paused, so notes can put
 	/// their own notch back after the line.
 	@ObservationIgnored var onPausedPress: (() -> Void)?
+	/// Listening or transcribing: the notch belongs to dictation.
+	private(set) var isDictating = false {
+		didSet {
+			if isDictating != oldValue { onDictatingChange?(isDictating) }
+		}
+	}
+	/// Called when `isDictating` flips, so a call prompt can step aside.
+	@ObservationIgnored var onDictatingChange: ((Bool) -> Void)?
 
 	@ObservationIgnored private let overlay: OverlayController
 	@ObservationIgnored private let monitor: HotkeyMonitor
@@ -402,6 +410,11 @@ final class DictationController {
 		let pressWasStray = keyDownAt.map { (keyUpAt ?? .now) - $0 < Self.strayPress } ?? false
 		if state != .listening(locked: false) {
 			cancelReveal()
+		}
+		switch state {
+		case .listening, .transcribing: isDictating = true
+		case .idle: isDictating = false
+		default: break
 		}
 		switch state {
 		case .idle:

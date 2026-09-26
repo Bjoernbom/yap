@@ -10,6 +10,7 @@ final class AppModel {
 	let text = TextSettingsStore()
 	let onboarding: OnboardingModel
 	let notes: NotesController
+	private let callPrompt: CallPrompt
 	let updater = AppUpdater()
 
 	#if DEBUG
@@ -25,6 +26,7 @@ final class AppModel {
 		onboarding = OnboardingModel(dictation: dictation)
 		notes = NotesController(overlay: overlay, dictation: dictation)
 		overlay.onMeetingClick = { [notes] in notes.showLiveTranscript() }
+		callPrompt = CallPrompt(overlay: overlay, notes: notes, dictation: dictation)
 		var startsDictation = true
 		#if DEBUG
 		demo = OverlayDemo(overlay: overlay)
@@ -42,6 +44,7 @@ final class AppModel {
 		if startsDictation {
 			dictation.start()
 			notes.start()
+			callPrompt.start()
 		}
 	}
 

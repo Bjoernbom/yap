@@ -12,6 +12,7 @@ struct SettingsView: View {
 	/// Read when the window appears; the user may have changed it in System
 	/// Settings meanwhile.
 	@State private var fnUsage = FnKeyUsage.current
+	@AppStorage(CallPrompt.enabledKey, store: AppDefaults.store) private var offersNotesOnCalls = true
 
 	var body: some View {
 		Form {
@@ -34,6 +35,13 @@ struct SettingsView: View {
 
 			Section {
 				LabeledContent("Paste last", value: "⌃⌘V")
+			}
+
+			Section {
+				Toggle("Offer to take notes on calls", isOn: $offersNotesOnCalls)
+			} footer: {
+				Text("When a call starts, the notch asks. One click starts notes.")
+					.foregroundStyle(.secondary)
 			}
 
 			Section {

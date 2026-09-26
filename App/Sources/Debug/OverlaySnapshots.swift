@@ -21,6 +21,8 @@ enum OverlaySnapshots {
 			("done", .done, now.addingTimeInterval(-2)),
 			("message", .message("Couldn't type here. It's on your clipboard."), now),
 			("recording", .recording(since: now.addingTimeInterval(-754)), now),
+			("prompt-take-notes", .prompt(.takeNotes), now),
+			("prompt-stop-notes", .prompt(.stopNotes), now),
 		]
 
 		for (suffix, geometry) in geometries {
