@@ -10,7 +10,29 @@ public enum Cleanup {
 		var tokens = text.split(whereSeparator: \.isWhitespace).map(Token.init)
 		tokens = removeFillers(tokens, style: style)
 		tokens = collapseRepeats(tokens)
-		return fixSpacing(tokens.map(\.text).joined(separator: " "))
+		var joined = tokens.map(\.text).joined(separator: " ")
+		if style != .dev {
+			joined = capitalizingAfterDoublePeriod(joined)
+		}
+		return fixSpacing(joined)
+	}
+
+	/// Parakeet's "again.. can you" ends a sentence, so once `fixSpacing`
+	/// collapses it to one period the next word needs a capital. Only plain
+	/// lowercase words, and only after a doubled period: a single period can
+	/// be an abbreviation ("t.ex. att").
+	static let afterDoublePeriod = try? NSRegularExpression(
+		pattern: #"(?<=[\p{L}\p{N}])\.\.\s+(\p{Ll})(?=[\p{Ll}'’-]*(?:[\s,.;:!?]|$))"#
+	)
+
+	static func capitalizingAfterDoublePeriod(_ text: String) -> String {
+		guard let expression = afterDoublePeriod else { return text }
+		var result = text
+		for match in expression.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+			guard let range = Range(match.range(at: 1), in: result) else { continue }
+			result.replaceSubrange(range, with: result[range].uppercased())
+		}
+		return result
 	}
 
 	/// Pure hesitations in Swedish and English. Deliberately short: words
