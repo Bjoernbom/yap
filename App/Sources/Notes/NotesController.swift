@@ -24,6 +24,8 @@ final class NotesController {
 		static let couldNotStart = "Couldn't start notes. Try again."
 		static let couldNotSave = "Couldn't save the note. It's on your clipboard."
 		static let micBusy = "Finish dictating first."
+		/// The note window has the full line with the path.
+		static let savedElsewhere = "Couldn't use your notes folder. Saved elsewhere."
 	}
 
 	/// Which window the menu bar label should open next (it owns
@@ -208,8 +210,8 @@ final class NotesController {
 			let timings = await session.lastStopTimings
 			Logger.notes.notice("Stop to note written: \(elapsed, privacy: .public) (flush \(timings.flush, privacy: .public), diarization \(timings.diarization, privacy: .public), summary \(timings.summary, privacy: .public)) at \(written.url.path, privacy: .public)")
 			lastNote = FinishedNote(note: note, title: writer.title(for: note), written: written)
-			if let notice = written.fallbackNotice {
-				overlay.show(.message(notice))
+			if written.fallbackNotice != nil {
+				overlay.show(.message(Message.savedElsewhere))
 			} else {
 				overlay.show(.done)
 			}
