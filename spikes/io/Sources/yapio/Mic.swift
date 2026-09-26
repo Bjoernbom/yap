@@ -200,6 +200,7 @@ func micTrial(mode: MicMode, vp: Bool, pin: AudioDeviceID?, record: Double = 0, 
 		}
 		let out = defaultDevice(input: false)
 		print("    during capture: default output '\(device(out).name)' nominal rate \(device(out).sampleRate) Hz")
+		if let pin { print("    pinned device \(pin) running=\(isRunningSomewhere(pin)); default input \(defaultDevice(input: true)) running=\(isRunningSomewhere(defaultDevice(input: true)))") }
 		runLoop(for: record)
 		let samples = sink.collected
 		var lvl = Level()
@@ -247,7 +248,10 @@ func runMic(_ args: Args) {
 	print("  default input: '\(defIn.name)' \(defIn.transportName) \(defIn.sampleRate) Hz; default output: '\(defOut.name)' \(defOut.sampleRate) Hz")
 
 	var pin: AudioDeviceID?
-	if args.flag("builtin") {
+	if let id = args.value("device").flatMap(UInt32.init) {
+		pin = id
+		print("  pinning capture to device \(id) '\(device(id).name)'")
+	} else if args.flag("builtin") {
 		pin = allDevices().first { $0.transport == kAudioDeviceTransportTypeBuiltIn && $0.inputChannels > 0 }?.id
 		print("  pinning capture to built-in mic: \(pin.map { "\($0) '\(device($0).name)'" } ?? "none found")")
 	}

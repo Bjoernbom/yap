@@ -33,12 +33,19 @@ func runDevices(_ args: Args) {
 	if args.flag("pin-test") {
 		// Pin AVAudioEngine's input to the built-in mic via kAudioOutputUnitProperty_CurrentDevice
 		// on the input node's AUHAL. This does not touch the system default device.
-		guard let builtIn = devices.first(where: { $0.transport == kAudioDeviceTransportTypeBuiltIn && $0.inputChannels > 0 }) else {
-			print("  no built-in input"); return
+		let wanted = args.value("device").flatMap(UInt32.init)
+		let target: AudioDevice? = if let wanted {
+			devices.first { $0.id == wanted }
+		} else {
+			devices.first { $0.transport == kAudioDeviceTransportTypeBuiltIn && $0.inputChannels > 0 }
 		}
+		guard let builtIn = target else {
+			print("  no matching input"); return
+		}
+		print("  pin target: \(builtIn.id) '\(builtIn.name)' (\(builtIn.transportName)); default input \(defIn)")
 		for vp in [false, true] {
 			let engine = AVAudioEngine()
-			if vp { try? engine.inputNode.setVoiceProcessingEnabled(true); engine.mainMixerNode.outputVolume = 0 }
+			if vp { try? engine.inputNode.setVoiceProcessingEnabled(true) }
 			let status = pinInput(engine, to: builtIn.id)
 			let current = currentInputDevice(engine)
 			let format = engine.inputNode.outputFormat(forBus: 0)
@@ -47,7 +54,8 @@ func runDevices(_ args: Args) {
 			do { try engine.start() } catch { startError = " start error: \(error)" }
 			runLoop(for: 0.5)
 			let runningBuiltIn = isRunningSomewhere(builtIn.id)
-			print("  vp=\(vp): set CurrentDevice -> \(osStatus(status)); AU reports \(current.map(String.init) ?? "?"); built-in running=\(runningBuiltIn); default input still \(defaultDevice(input: true)) (unchanged: \(defaultDevice(input: true) == defIn))\(startError)")
+			let runningDefault = isRunningSomewhere(defIn)
+			print("  vp=\(vp): set CurrentDevice -> \(osStatus(status)); AU reports \(current.map(String.init) ?? "?"); target running=\(runningBuiltIn), default-input running=\(runningDefault); default input still \(defaultDevice(input: true)) (unchanged: \(defaultDevice(input: true) == defIn))\(startError)")
 			engine.stop()
 		}
 	}
