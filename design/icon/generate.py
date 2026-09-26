@@ -41,8 +41,8 @@ COLORS = {
 	'.': (10, 10, 10),     # icon black, a hair above pure black so the edge light reads
 	'k': (0, 0, 0),        # the notch itself
 	'#': (245, 245, 245),  # ink
-	'L': (200, 255, 61),   # signal lime, #C8FF3D
-	'l': (95, 118, 34),    # dim lime: a quiet bar, lime at 45 % on black
+	'L': (217, 212, 199),  # bone, #D9D4C7
+	'l': (103, 101, 95),   # dim bone: a quiet bar, bone at 45 % on black
 }
 
 SIZES = (16, 32, 64, 128, 256, 512, 1024)
@@ -98,7 +98,7 @@ def parse(rows):
 # hand-tuned 14 x 14 grid for the 16 px image.
 
 def cursor():
-	"""A pixel "y" and a lime text cursor: talk, it types."""
+	"""A pixel "y" and a bone text cursor: talk, it types."""
 	g = Grid(26)
 	g.bitmap(GLYPHS['y'], 4, 2, '#', 3)
 	g.rect(19, 2, 3, 15, 'L')
@@ -127,7 +127,7 @@ WAVE_HEIGHTS = [1, 5, 3, 7, 3, 5, 1]
 
 
 def wave():
-	"""The notch's pixel waveform, lime dots on black."""
+	"""The notch's pixel waveform, bone dots on black."""
 	g = Grid(26)
 	for i, dots in enumerate(WAVE_HEIGHTS):
 		color = 'l' if dots == 1 else 'L'
@@ -150,7 +150,7 @@ def wave():
 
 
 def notch():
-	"""A black notch hanging from the top edge, waveform inside, on lime."""
+	"""A black notch hanging from the top edge, waveform inside, on bone."""
 	g = Grid(26, 'L')
 	g.rect(4, 0, 18, 10, 'k')
 	g.rect(5, 10, 16, 1, 'k')
@@ -182,7 +182,7 @@ def notch():
 
 
 def wordmark():
-	"""The 0.4 icon, pixel-snapped: the "yap" wordmark over a lime dot line."""
+	"""The 0.4 icon, pixel-snapped: the "yap" wordmark over a bone dot line."""
 	g = Grid(32)
 	for i, ch in enumerate('yap'):
 		g.bitmap(GLYPHS[ch], 2 + i * 10, 8, '#', 2)
@@ -197,7 +197,7 @@ def wordmark():
 CONCEPTS = [
 	('cursor', 'y + cursor', cursor),
 	('wave', 'pixel waveform', wave),
-	('notch', 'notch on lime', notch),
+	('notch', 'notch on bone', notch),
 	('wordmark', '0.4 wordmark', wordmark),
 ]
 
@@ -321,7 +321,7 @@ def images_for(make):
 
 def measure():
 	"""Measures how IconServices resamples each small image into its body:
-	renders combs of lime columns and records, per screen pixel, which image
+	renders combs of bone columns and records, per screen pixel, which image
 	columns feed it and how much. Writes kernel.json."""
 	period = 8
 	work = tempfile.mkdtemp(dir=os.makedirs(SCRATCH, exist_ok=True) or SCRATCH)
