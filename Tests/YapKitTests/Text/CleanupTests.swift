@@ -5,13 +5,15 @@ import Testing
 struct CleanupTests {
 	@Test(arguments: [
 		("Um, I think we should ship it on Friday.", "I think we should ship it on Friday."),
-		("I think, uh, we should ship it.", "I think, we should ship it."),
+		("I think, uh, we should ship it.", "I think we should ship it."),
+		("Hej, eh, hur mår du?", "Hej, hur mår du?"),
+		("So, um, what now?", "So, what now?"),
 		("So we should uh ship it.", "So we should ship it."),
 		("We should ship it, uh.", "We should ship it."),
 		("Erm, what's the plan?", "What's the plan?"),
 		("Eh, kan du skicka filen till Lena?", "Kan du skicka filen till Lena?"),
-		("Öh, jag tror att vi, ehm, borde vänta.", "Jag tror att vi, borde vänta."),
-		("Vi ses, hmm, imorgon. Äh, eller på fredag.", "Vi ses, imorgon. Eller på fredag."),
+		("Öh, jag tror att vi, ehm, borde vänta.", "Jag tror att vi borde vänta."),
+		("Vi ses, hmm, imorgon. Äh, eller på fredag.", "Vi ses imorgon. Eller på fredag."),
 		("Och sen, öh... gick vi hem.", "Och sen, gick vi hem."),
 	])
 	func removesFillers(input: String, expected: String) {

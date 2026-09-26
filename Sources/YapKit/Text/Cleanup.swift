@@ -75,6 +75,12 @@ public enum Cleanup {
 				let terminator = token.trail.filter { $0 != "," }
 				if terminator == "." || terminator == "!", let last = kept.indices.last, !kept[last].endsSentence {
 					kept[last].trail = Substring(kept[last].trail.filter { $0 != "," } + terminator)
+				} else if token.trail.hasPrefix(","), let last = kept.indices.last, kept[last].trail == ",",
+				          last > 0, !kept[last - 1].endsSentence {
+					// The recognizer brackets a hesitation in commas: "vi, eh, borde"
+					// reads "vi borde". A comma after a sentence's first word
+					// ("Hej, eh, …", "So, um, …") is real and stays.
+					kept[last].trail = ""
 				}
 				continue
 			}
