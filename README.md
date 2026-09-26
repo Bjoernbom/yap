@@ -130,6 +130,9 @@ Looking for the old Tauri app? yap 0.4 lives under the
 
 ## license
 
-[MIT](LICENSE). Pixelify Sans is under the [OFL](App/Resources/Fonts/OFL.txt).
+[MIT](LICENSE): use it, copy it, change it, sell it. Just keep the copyright
+notice. It comes as is, with no warranty. yap stands on open libraries and
+models; credits and their licenses are in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 made by [bjornbom](https://github.com/Bjoernbom).
