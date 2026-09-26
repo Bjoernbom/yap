@@ -8,6 +8,7 @@ final class AppModel {
 	let overlay: OverlayController
 	let dictation: DictationController
 	let text = TextSettingsStore()
+	let onboarding: OnboardingModel
 	private(set) var isTakingNotes = false
 
 	#if DEBUG
@@ -18,6 +19,7 @@ final class AppModel {
 		let overlay = OverlayController()
 		self.overlay = overlay
 		dictation = DictationController(overlay: overlay)
+		onboarding = OnboardingModel(dictation: dictation)
 		var startsDictation = true
 		#if DEBUG
 		demo = OverlayDemo(overlay: overlay)
