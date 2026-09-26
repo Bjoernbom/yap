@@ -6,11 +6,12 @@ let usage = """
 usage: yapio <command> [options]
   perms     [--request]                         permission status (+ one-shot prompts)
   hotkey    [--active] [--selftest] [--seconds N]   CGEventTap for Fn / right ⌥, double-tap, Esc
-  mic       [--runs N] [--builtin] [--record S --vp --name X]   AVAudioEngine latency / recording
-  systap    [--seconds S] [--sound path] [--all]   Core Audio process tap -> .local/*.wav
-  calls     [--demo | --seconds N] [--verbose]  who uses the mic (call detection)
-  insert    [--runs N] [--secure-demo] [--pasteboard-only]   AX / ⌘V insertion into TextEdit
-  devices   [--pin-test]                        input devices, transport, pinning
+  mic       [--runs N] [--only-vp] [--vp-variant none|mixer|match|...+noduck+lateduck]
+            [--builtin | --device ID] [--record S --vp --name X]   AVAudioEngine latency / recording
+  systap    [--seconds S] [--sound path] [--all] [--global-only --name X]   process tap -> .local/*.wav
+  calls     [--demo | --seconds N] [--poll] [--verbose]   who uses the mic (call detection)
+  insert    [--runs N] [--secure-demo] [--pasteboard-only] [--focused --delay S]   AX / ⌘V insertion
+  devices   [--pin-test [--device ID]]          input devices, transport, pinning
   wavstat   <file.wav>... [--window S]          levels read back from a WAV file
 """
 

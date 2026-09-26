@@ -133,6 +133,7 @@ func runInsert(_ args: Args) {
 
 	if args.flag("secure-demo") { runSecureDemo(); return }
 	if args.flag("pasteboard-only") { runPasteboardOnly(args); return }
+	if args.flag("focused") { runInsertFocused(args); return }
 
 	guard AXIsProcessTrusted() else {
 		print("  RESULT: blocked, Accessibility not granted (AX focused element returns apiDisabled; ⌘V posting is dropped)")
@@ -254,6 +255,46 @@ func textEditField() -> FocusedField? {
 		role: axString(focused, kAXRoleAttribute as String) ?? "",
 		subrole: axString(focused, kAXSubroleAttribute as String) ?? ""
 	)
+}
+
+/// Manual tool: after a delay, insert into whatever field the user focused, AX first and
+/// ⌘V as fallback, the way yap's Inserter would. Used for MANUAL.md step 6.
+@MainActor
+func runInsertFocused(_ args: Args) {
+	let delay = args.double("delay", 3)
+	let text = args.value("text") ?? " [yap]"
+	print("  focus a text field in the target app within \(Int(delay)) s ...")
+	runLoop(for: delay)
+	let (target, err) = focusedField()
+	guard let target else { print("  no focused element: \(axErrorName(err))"); return }
+	let app = NSRunningApplication(processIdentifier: target.pid)?.bundleIdentifier ?? "?"
+	print("  target: \(app) pid \(target.pid) role \(target.role) subrole '\(target.subrole)'")
+	if target.isSecure || IsSecureEventInputEnabled() {
+		print("  RESULT: secure field / secure input -> nothing inserted"); return
+	}
+	let before = axString(target.element, kAXValueAttribute as String)
+	let t0 = nowNs()
+	let axErr = AXUIElementSetAttributeValue(target.element, kAXSelectedTextAttribute as CFString, text as CFString)
+	let axMs = msValue(nowNs() - t0)
+	let after = axString(target.element, kAXValueAttribute as String)
+	let verified = axErr == .success && after != before && after?.contains(text) == true
+	print("  AX set: \(axErrorName(axErr)) in \(String(format: "%.1f", axMs)) ms; value readable: \(after != nil); verified: \(verified)")
+	if verified { print("  RESULT: inserted via AX"); return }
+	guard focusedField().0?.pid == target.pid else { print("  RESULT: focus changed, nothing pasted"); return }
+	let saved = SavedPasteboard.save()
+	let provider = PasteProvider(text: text)
+	NSPasteboard.general.clearContents()
+	let item = NSPasteboardItem()
+	item.setDataProvider(provider, forTypes: [.string])
+	for t in transientTypes { item.setString("", forType: t) }
+	NSPasteboard.general.writeObjects([item])
+	let posted = nowNs()
+	postCommandV()
+	let requested = runLoop(for: 0.5) { !provider.requests.isEmpty }
+	runLoop(for: 0.05)
+	saved.restore()
+	let when = provider.requests.first.map { String(format: "%.1f ms", msValue($0.0 - posted)) } ?? "never"
+	print("  RESULT: \(requested ? "pasted via ⌘V" : "⌘V ignored (no data request)"); data requested after \(when); clipboard restored")
 }
 
 /// Pasteboard save/set/restore timings that need no permission.
