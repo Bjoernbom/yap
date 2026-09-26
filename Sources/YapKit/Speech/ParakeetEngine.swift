@@ -55,8 +55,11 @@ public actor ParakeetEngine: SpeechEngine {
 	public init(model: ParakeetModel = .preferred, modelDirectory: URL? = nil) {
 		self.model = model
 		self.modelDirectory = modelDirectory
+		// Critical only. On a Mac that lives at the warning level (a busy 18 GB
+		// machine with VMs) unloading on warnings meant a reload, and a stall
+		// while ~600 MB came back from swap, on nearly every dictation.
 		let source = DispatchSource.makeMemoryPressureSource(
-			eventMask: [.warning, .critical], queue: .global(qos: .utility))
+			eventMask: .critical, queue: .global(qos: .utility))
 		pressureSource = source
 		source.setEventHandler { [weak self] in
 			guard let self else { return }
